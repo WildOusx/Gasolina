@@ -109,6 +109,42 @@ class BcvService {
       // ignore network errors
     }
 
+    // Intento 3: API alternativa de DolarToday
+    const String dolartoday = 'https://s3.amazonaws.com/dolartoday/data.json';
+    try {
+      final http.Response resp = await http
+          .get(Uri.parse(dolartoday))
+          .timeout(_timeout);
+      if (resp.statusCode == 200) {
+        final dynamic data = json.decode(resp.body);
+        // La tasa BCV suele estar en data['USD']['promedio_real']
+        if (data is Map<String, dynamic>) {
+          final dynamic usd = data['USD'];
+          if (usd is Map<String, dynamic>) {
+            final dynamic bcv = usd['promedio_real'];
+            final double? p = _parseToDouble(bcv);
+            if (p != null && p > 0) return p;
+          }
+        }
+      }
+    } catch (_) {
+      // ignore network errors
+    }
+
+    // Intento 4: Nueva API pública bcvapi.tech
+    const String bcvapi = 'https://bcvapi.tech/api/v1/dolar';
+    try {
+      final http.Response resp = await http.get(Uri.parse(bcvapi)).timeout(_timeout);
+      if (resp.statusCode == 200) {
+        final dynamic data = json.decode(resp.body);
+        if (data is Map<String, dynamic> && data.containsKey('tasa')) {
+          final double? p = _parseToDouble(data['tasa']);
+          if (p != null && p > 0) return p;
+        }
+      }
+    } catch (_) {
+      // ignore network errors
+    }
     return null;
   }
 

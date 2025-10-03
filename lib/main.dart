@@ -67,10 +67,10 @@ class _GasolinaAppState extends State<GasolinaApp> {
   }
 
   Future<void> _setAccent(Color c) async {
-  final SharedPreferences prefs = await SharedPreferences.getInstance();
-  // Usar .value para persistencia (toArgb no existe en Flutter estable)
-  await prefs.setInt('accent_color', c.value);
-  setState(() => _accent = c);
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    // Usar .value para persistencia (toArgb no existe en Flutter estable)
+    await prefs.setInt('accent_color', c.value);
+    setState(() => _accent = c);
   }
 
   Future<void> _setThemeMode(ThemeMode mode) async {
@@ -123,13 +123,7 @@ class GasCalendarScreen extends StatefulWidget {
 }
 
 class _GasCalendarScreenState extends State<GasCalendarScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Inicializa currentMonth al primer día del mes actual
-    final now = DateTime.now();
-    currentMonth = DateTime(now.year, now.month, 1);
-  }
+  // initState ya está correctamente definido más abajo
   // Navega al mes actual (hoy)
   void _goToday() {
     // TODO: Implementar funcionalidad para ir al mes actual
@@ -160,13 +154,33 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (BuildContext ctx) => GasCalculatorSheet(),
+      builder: (BuildContext ctx) => const GasCalculatorSheet(),
     );
+  }
+
+  Future<void> _loadPrefs() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final int? digit = prefs.getInt('last_digit');
+    if (digit != null && digit >= 0 && digit <= 9) {
+      lastDigit = digit;
+    }
+    setState(() {
+      _loadingPrefs = false;
+    });
   }
 
   late DateTime currentMonth; // anclado al día 1 del mes visible
   int lastDigit = 1;
   bool _loadingPrefs = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializa currentMonth al primer día del mes actual
+    final now = DateTime.now();
+    currentMonth = DateTime(now.year, now.month, 1);
+    _loadPrefs();
+  }
 
   // Abre el selector de mes/a[0mo
   Future<void> _openMonthYearPicker() async {
@@ -859,12 +873,8 @@ class GasCalculatorSheet extends StatefulWidget {
 
 class _GasCalculatorSheetState extends State<GasCalculatorSheet> {
   final TextEditingController _litrosCtrl = TextEditingController();
-  final TextEditingController _precioBsCtrl = TextEditingController(
-    text: '0.50',
-  );
   double? _tasa;
   bool _loading = false;
-  String? _error;
 
   @override
   void initState() {
@@ -875,39 +885,29 @@ class _GasCalculatorSheetState extends State<GasCalculatorSheet> {
   Future<void> _fetchTasa() async {
     setState(() {
       _loading = true;
-      _error = null;
     });
-    final double? t = await BcvService.fetchUsdRate();
-    setState(() {
-      _tasa = t;
-      _loading = false;
-      if (t == null) {
-        _error = 'No se pudo obtener la tasa BCV.';
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _litrosCtrl.dispose();
-    _precioBsCtrl.dispose();
-    super.dispose();
+    try {
+      final tasa = await BcvService.fetchUsdRate();
+      setState(() {
+        _tasa = tasa;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final double? litros = double.tryParse(
-      _litrosCtrl.text.replaceAll(',', '.'),
-    );
-    final double? precioBs = double.tryParse(
-      _precioBsCtrl.text.replaceAll(',', '.'),
-    );
-    double? totalBs;
+    double? litros = double.tryParse(_litrosCtrl.text.replaceAll(',', '.'));
     double? totalUsd;
-    if (litros != null && precioBs != null) {
-      totalBs = litros * precioBs;
-      if (_tasa != null && _tasa! > 0) {
-        totalUsd = totalBs / _tasa!;
+    double? totalBs;
+    if (litros != null) {
+      totalUsd = litros / 2;
+      if (_tasa != null) {
+        totalBs = totalUsd * _tasa!;
       }
     }
     return Padding(
@@ -925,10 +925,7 @@ class _GasCalculatorSheetState extends State<GasCalculatorSheet> {
             children: [
               const Icon(Icons.local_gas_station, size: 28),
               const SizedBox(width: 10),
-              Text(
-                'Calculadora de Gasolina',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text('Calculadora de Gasolina', style: Theme.of(context).textTheme.titleLarge),
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.refresh),
@@ -938,75 +935,40 @@ class _GasCalculatorSheetState extends State<GasCalculatorSheet> {
             ],
           ),
           const SizedBox(height: 12),
-          if (_loading) const LinearProgressIndicator(minHeight: 2),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 8),
-              child: Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
+          TextField(
+            controller: _litrosCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Litros',
+              prefixIcon: Icon(Icons.local_gas_station),
             ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _litrosCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Litros',
-                    prefixIcon: Icon(Icons.local_gas_station),
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _precioBsCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Precio Bs/Litro',
-                    prefixText: 'Bs ',
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-              ),
-            ],
+            onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 18),
-          if (totalBs != null)
-            Row(
-              children: [
-                const Text(
-                  'Total: ',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  'Bs ${totalBs.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                if (totalUsd != null) ...[
-                  const SizedBox(width: 18),
-                  const Text('≈ '),
-                  Text(
-                    '\u0024${totalUsd.toStringAsFixed(2)}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+          if (totalUsd != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  const Text('Total en USD: ', style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text('4${totalUsd.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
                 ],
-              ],
+              ),
+            ),
+          if (totalBs != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  const Text('Total en Bs: ', style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text('Bs ${totalBs.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
+                ],
+              ),
             ),
           if (_tasa != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Tasa BCV: ${_tasa!.toStringAsFixed(2)} Bs/USD',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              child: Text('Tasa BCV: ${_tasa!.toStringAsFixed(2)} Bs/USD', style: Theme.of(context).textTheme.bodySmall),
             ),
           const SizedBox(height: 18),
           Row(
