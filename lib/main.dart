@@ -454,8 +454,8 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                           children: <Widget>[
                             _Legend(color: Theme.of(context).colorScheme.primaryContainer, label: 'Permitido'),
                             _Legend(outlineColor: Theme.of(context).colorScheme.primary, label: 'Hoy'),
-                            _Legend(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.22), label: 'Fin de semana'),
-                            _Legend(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.10), label: 'Otro mes'),
+                            _Legend(color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.22), label: 'Fin de semana'),
+                            _Legend(color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.10), label: 'Otro mes'),
                           ],
                         ),
                       ],
@@ -586,8 +586,8 @@ class _CalendarGrid extends StatelessWidget {
                 final Color bg = allowed
                     ? scheme.primaryContainer
                     : (isWeekend
-                          ? scheme.surfaceVariant.withOpacity(0.22)
-                          : scheme.surfaceVariant.withOpacity(0.35));
+                          ? scheme.surfaceContainerHighest.withOpacity(0.22)
+                          : scheme.surfaceContainerHighest.withOpacity(0.35));
                 final Color fg = allowed
                     ? scheme.onPrimaryContainer
                     : scheme.onSurfaceVariant;
@@ -673,7 +673,7 @@ class _OtherMonthDayCell extends StatelessWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceVariant.withOpacity(0.10),
+        color: scheme.surfaceContainerHighest.withOpacity(0.10),
         borderRadius: BorderRadius.circular(10),
       ),
       constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
