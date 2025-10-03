@@ -25,7 +25,8 @@ class GasSchedule {
   static String monthKey(int year, int month) =>
       '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}';
 
-  static int _daysInMonth(int year, int month) => DateTime(year, month + 1, 0).day;
+  static int _daysInMonth(int year, int month) =>
+      DateTime(year, month + 1, 0).day;
 
   static String pairLabelForDigit(int digit) {
     if (<int>[1, 2].contains(digit)) return '1-2';
@@ -57,12 +58,14 @@ class GasSchedule {
     int idx = baseIdx;
 
     // Comparación cronológica simple
-    bool isAfterBase = (year > baseYear) || (year == baseYear && month > baseMonth);
+    bool isAfterBase =
+        (year > baseYear) || (year == baseYear && month > baseMonth);
 
     if (isAfterBase) {
       // Adelante desde base hasta target (sin incluir target al sumar días)
       while (y != year || m != month) {
-        final int dm = _daysInMonth(y, m) % pairs.length; // sólo modulo 5 importa
+        final int dm =
+            _daysInMonth(y, m) % pairs.length; // sólo modulo 5 importa
         idx = (idx + dm) % pairs.length;
         // siguiente mes
         m += 1;
