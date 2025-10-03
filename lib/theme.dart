@@ -39,7 +39,7 @@ ThemeData appThemeLight({Color accent = AppColors.red}) {
     useMaterial3: true,
     brightness: Brightness.light,
     colorScheme: scheme,
-  scaffoldBackgroundColor: AppColors.white,
+    scaffoldBackgroundColor: AppColors.white,
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.navy,
       foregroundColor: AppColors.white,

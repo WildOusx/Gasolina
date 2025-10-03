@@ -14,7 +14,11 @@ void main() {
     }
   });
   quickActions.setShortcutItems(<ShortcutItem>[
-    const ShortcutItem(type: 'action_today', localizedTitle: 'Ir a Hoy', icon: 'ic_launcher'),
+    const ShortcutItem(
+      type: 'action_today',
+      localizedTitle: 'Ir a Hoy',
+      icon: 'ic_launcher',
+    ),
   ]);
 
   runApp(const GasolinaApp());
@@ -81,6 +85,7 @@ class _GasolinaAppState extends State<GasolinaApp> {
       return MaterialApp(
         theme: appThemeLight(),
         home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+        debugShowCheckedModeBanner: false,
       );
     }
     return MaterialApp(
@@ -93,12 +98,18 @@ class _GasolinaAppState extends State<GasolinaApp> {
         themeMode: _themeMode,
         onThemeModeChanged: _setThemeMode,
       ),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
 class GasCalendarScreen extends StatefulWidget {
-  const GasCalendarScreen({super.key, this.onAccentChanged, this.themeMode = ThemeMode.system, this.onThemeModeChanged});
+  const GasCalendarScreen({
+    super.key,
+    this.onAccentChanged,
+    this.themeMode = ThemeMode.system,
+    this.onThemeModeChanged,
+  });
 
   final ValueChanged<Color>? onAccentChanged;
   final ThemeMode themeMode;
@@ -206,7 +217,10 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                         ),
                         Expanded(
                           child: Center(
-                            child: Text('$selYear', style: Theme.of(context).textTheme.titleMedium),
+                            child: Text(
+                              '$selYear',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                           ),
                         ),
                         IconButton(
@@ -226,7 +240,8 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                         return ChoiceChip(
                           label: Text(_monthName(month)),
                           selected: selected,
-                          onSelected: (_) => setLocalState(() => selMonth = month),
+                          onSelected: (_) =>
+                              setLocalState(() => selMonth = month),
                         );
                       }),
                     ),
@@ -236,7 +251,10 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
             ),
           ),
           actions: <Widget>[
-            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancelar')),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar'),
+            ),
             FilledButton(
               onPressed: () {
                 setState(() => currentMonth = DateTime(selYear, selMonth, 1));
@@ -253,10 +271,16 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
   }
 
   void _announceMonth({String prefix = 'Mes:'}) {
-    final String label = '$prefix ${_monthName(currentMonth.month)} ${currentMonth.year}';
+    final String label =
+        '$prefix ${_monthName(currentMonth.month)} ${currentMonth.year}';
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(label), duration: const Duration(milliseconds: 1200)));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(label),
+          duration: const Duration(milliseconds: 1200),
+        ),
+      );
   }
 
   @override
@@ -275,6 +299,11 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
       appBar: AppBar(
         title: const Text('Calendario de Gasolina'),
         actions: <Widget>[
+          IconButton(
+            tooltip: 'Ir a hoy',
+            icon: const Icon(Icons.today),
+            onPressed: _goToday,
+          ),
           if (widget.onThemeModeChanged != null)
             PopupMenuButton<ThemeMode>(
               tooltip: 'Tema',
@@ -305,134 +334,138 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Shortcuts(
-            shortcuts: <LogicalKeySet, Intent>{
-              LogicalKeySet(LogicalKeyboardKey.arrowLeft): const _PrevMonthIntent(),
-              LogicalKeySet(LogicalKeyboardKey.arrowRight): const _NextMonthIntent(),
-              LogicalKeySet(LogicalKeyboardKey.enter): const _TodayIntent(),
-            },
-            child: Actions(
-              actions: <Type, Action<Intent>>{
-                _PrevMonthIntent: CallbackAction<_PrevMonthIntent>(onInvoke: (Intent i) => _prevMonth()),
-                _NextMonthIntent: CallbackAction<_NextMonthIntent>(onInvoke: (Intent i) => _nextMonth()),
-                _TodayIntent: CallbackAction<_TodayIntent>(onInvoke: (Intent i) => _goToday()),
-              },
-              child: Focus(
-                autofocus: true,
-                child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 900),
-              child: Column(
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                IconButton(
-                  tooltip: 'Mes anterior',
-                  icon: const Icon(Icons.chevron_left),
-                  onPressed: _prevMonth,
-                ),
-                Expanded(
-                  child: Center(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: _openMonthYearPicker,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        child: Tooltip(
-                          message: 'Cambiar mes/año',
-                          child: Text(
-                            '${_monthName(m)} $y',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+          child: Column(
+            children: [
+              // Encabezado y chips
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (Widget child, Animation<double> anim) {
+                  final Animation<Offset> slide =
+                      Tween<Offset>(begin: const Offset(0.15, 0), end: Offset.zero).animate(anim);
+                  return SlideTransition(position: slide, child: FadeTransition(opacity: anim, child: child));
+                },
+                child: KeyedSubtree(
+                  key: ValueKey<String>('month-$y-$m'),
+                  child: Row(
+                    children: <Widget>[
+                      IconButton(
+                        tooltip: 'Mes anterior',
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: _prevMonth,
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: _openMonthYearPicker,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              child: Tooltip(
+                                message: 'Cambiar mes/año',
+                                child: Text(
+                                  '${_monthName(m)} $y',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
+                      IconButton(
+                        tooltip: 'Mes siguiente',
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: _nextMonth,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('Terminal de placa: ', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: KeyedSubtree(
+                      key: ValueKey<int>(lastDigit),
+                      child: _PlateGroupChips(
+                        selectedDigit: lastDigit,
+                        onChanged: (int d) {
+                          setState(() => lastDigit = d);
+                          _savePrefs();
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Calendario expandido
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('Placa: $pairLabel',
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            switchInCurve: Curves.easeOut,
+                            switchOutCurve: Curves.easeIn,
+                            transitionBuilder: (Widget child, Animation<double> anim) {
+                              final Animation<Offset> offset =
+                                  Tween<Offset>(begin: const Offset(0.1, 0), end: Offset.zero)
+                                      .animate(CurvedAnimation(parent: anim, curve: Curves.easeOut));
+                              return SlideTransition(position: offset, child: FadeTransition(opacity: anim, child: child));
+                            },
+                            child: KeyedSubtree(
+                              key: ValueKey<String>('cal-$y-$m-${lastDigit.toString()}'),
+                              child: _CalendarGrid(
+                                year: y,
+                                month: m,
+                                allowedDays: Set<int>.from(days),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 16,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: <Widget>[
+                            _Legend(color: Theme.of(context).colorScheme.primaryContainer, label: 'Permitido'),
+                            _Legend(outlineColor: Theme.of(context).colorScheme.primary, label: 'Hoy'),
+                            _Legend(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.22), label: 'Fin de semana'),
+                            _Legend(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.10), label: 'Otro mes'),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Mes siguiente',
-                  icon: const Icon(Icons.chevron_right),
-                  onPressed: _nextMonth,
-                ),
-                const SizedBox(width: 8),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text('Terminal de placa: ', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 8),
-                _PlateGroupChips(
-                  selectedDigit: lastDigit,
-                  onChanged: (int d) {
-                    setState(() => lastDigit = d);
-                    _savePrefs();
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text('Placa: $pairLabel',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 12),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeIn,
-                      transitionBuilder: (Widget child, Animation<double> anim) {
-                        final Animation<Offset> offset = Tween<Offset>(begin: const Offset(0.1, 0), end: Offset.zero)
-                            .animate(CurvedAnimation(parent: anim, curve: Curves.easeOut));
-                        return SlideTransition(position: offset, child: FadeTransition(opacity: anim, child: child));
-                      },
-                      child: KeyedSubtree(
-                        key: ValueKey<String>('cal-$y-$m-${lastDigit.toString()}'),
-                        child: _CalendarGrid(
-                          year: y,
-                          month: m,
-                          allowedDays: Set<int>.from(days),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 16,
-                      runSpacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: <Widget>[
-                        _Legend(color: Theme.of(context).colorScheme.primaryContainer, label: 'Permitido'),
-                        _Legend(outlineColor: Theme.of(context).colorScheme.primary, label: 'Hoy'),
-                        _Legend(color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.22), label: 'Fin de semana'),
-                      ],
-                    ),
-                  ],
-                ),
               ),
-            ),
-            const SizedBox(height: 8),
-          ],
-              ),
-            ),
-                ),
-              ),
-            ),
+            ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _goToday,
-        icon: const Icon(Icons.today),
-        label: const Text('Hoy'),
       ),
     );
   }
@@ -471,26 +504,29 @@ class _CalendarGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use LayoutBuilder to adapt cell sizes to available width.
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double width = constraints.maxWidth;
-        // Deduct the crossAxisSpacing (6 px between 7 columns means 6*6 = 36 px)
         final double totalSpacing = 6 * 6;
         final double cellWidth = (width - totalSpacing) / 7.0;
-        // Aim for near-square cells, but allow a bit more height for legibility.
         final double cellHeight = cellWidth * 1.05;
-        final double aspectRatio = cellWidth / cellHeight; // ~0.95
-        final bool showFullDow = cellWidth >= 72; // Mostrar nombre completo cuando hay espacio suficiente
+        final double aspectRatio = cellWidth / cellHeight;
+        final bool showFullDow = cellWidth >= 72;
         final DateTime first = DateTime(year, month, 1);
         final int firstWeekday = first.weekday; // 1=Mon..7=Sun
-        final int startOffset = (firstWeekday + 6) % 7; // convertir a 0=Mon
+        final int startOffset = (firstWeekday + 6) % 7;
         final int daysInMonth = _daysInMonth(year, month);
         int totalCells = startOffset + daysInMonth;
         if (totalCells % 7 != 0) totalCells += 7 - (totalCells % 7);
 
+        // Previous month data
+        final int prevMonth = month == 1 ? 12 : month - 1;
+        final int prevYear = month == 1 ? year - 1 : year;
+        final int daysInPrevMonth = _daysInMonth(prevYear, prevMonth);
+
         final DateTime today = DateTime.now();
-        final bool isCurrentMonth = (today.year == year && today.month == month);
+        final bool isCurrentMonth =
+            (today.year == year && today.month == month);
 
         final ColorScheme scheme = Theme.of(context).colorScheme;
 
@@ -499,13 +535,13 @@ class _CalendarGrid extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                _DowCell(showFullDow ? 'Lunes' : 'L'),
-                _DowCell(showFullDow ? 'Martes' : 'M'),
-                _DowCell(showFullDow ? 'Miércoles' : 'X'),
-                _DowCell(showFullDow ? 'Jueves' : 'J'),
-                _DowCell(showFullDow ? 'Viernes' : 'V'),
-                _DowCell(showFullDow ? 'Sábado' : 'S', isWeekend: true),
-                _DowCell(showFullDow ? 'Domingo' : 'D', isWeekend: true),
+                _DowCell(showFullDow ? 'Lunes' : 'Lun'),
+                _DowCell(showFullDow ? 'Martes' : 'Mar'),
+                _DowCell(showFullDow ? 'Miércoles' : 'Mie'),
+                _DowCell(showFullDow ? 'Jueves' : 'Jue'),
+                _DowCell(showFullDow ? 'Viernes' : 'Vie'),
+                _DowCell(showFullDow ? 'Sábado' : 'Sáb', isWeekend: true),
+                _DowCell(showFullDow ? 'Domingo' : 'Dom', isWeekend: true),
               ],
             ),
             const SizedBox(height: 8),
@@ -520,22 +556,44 @@ class _CalendarGrid extends StatelessWidget {
               ),
               itemCount: totalCells,
               itemBuilder: (BuildContext context, int index) {
-                if (index < startOffset || index >= startOffset + daysInMonth) {
-                  return const SizedBox.shrink();
+                // Previous month days
+                if (index < startOffset) {
+                  final int day = daysInPrevMonth - (startOffset - index) + 1;
+                  final int weekday = (index % 7) + 1; // 1-7
+                  final bool isWknd =
+                      (weekday == DateTime.saturday ||
+                      weekday == DateTime.sunday);
+                  return _OtherMonthDayCell(day: day, isWeekend: isWknd);
                 }
+                // Next month days
+                if (index >= startOffset + daysInMonth) {
+                  final int day = index - (startOffset + daysInMonth) + 1;
+                  final int weekday = (index % 7) + 1; // 1-7
+                  final bool isWknd =
+                      (weekday == DateTime.saturday ||
+                      weekday == DateTime.sunday);
+                  return _OtherMonthDayCell(day: day, isWeekend: isWknd);
+                }
+
+                // Current month
                 final int day = index - startOffset + 1;
                 final bool allowed = allowedDays.contains(day);
                 final bool isToday = isCurrentMonth && today.day == day;
                 final int weekday = DateTime(year, month, day).weekday; // 1-7
-                final bool isWeekend = (weekday == DateTime.saturday || weekday == DateTime.sunday);
+                final bool isWeekend =
+                    (weekday == DateTime.saturday ||
+                    weekday == DateTime.sunday);
                 final Color bg = allowed
                     ? scheme.primaryContainer
                     : (isWeekend
-                        ? scheme.surfaceVariant.withOpacity(0.22)
-                        : scheme.surfaceVariant.withOpacity(0.35));
-                final Color fg = allowed ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
+                          ? scheme.surfaceVariant.withOpacity(0.22)
+                          : scheme.surfaceVariant.withOpacity(0.35));
+                final Color fg = allowed
+                    ? scheme.onPrimaryContainer
+                    : scheme.onSurfaceVariant;
                 return Semantics(
-                  label: 'Día $day${isToday ? ', hoy' : ''}${allowed ? ', permitido' : ''}${isWeekend ? ', fin de semana' : ''}',
+                  label:
+                      'Día $day${isToday ? ', hoy' : ''}${allowed ? ', permitido' : ''}${isWeekend ? ', fin de semana' : ''}',
                   selected: isToday,
                   child: Material(
                     color: Colors.transparent,
@@ -543,7 +601,13 @@ class _CalendarGrid extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        _showDayDetails(context, day, allowed, isWeekend, isToday);
+                        _showDayDetails(
+                          context,
+                          day,
+                          allowed,
+                          isWeekend,
+                          isToday,
+                        );
                       },
                       child: Stack(
                         children: <Widget>[
@@ -552,34 +616,40 @@ class _CalendarGrid extends StatelessWidget {
                               color: bg,
                               borderRadius: BorderRadius.circular(10),
                               border: isToday
-                                  ? Border.all(color: scheme.secondary, width: 3)
+                                  ? Border.all(
+                                      color: scheme.secondary,
+                                      width: 3,
+                                    )
                                   : null,
                               boxShadow: isToday
                                   ? <BoxShadow>[
                                       BoxShadow(
-                                        color: scheme.secondary.withOpacity(0.2),
+                                        color: scheme.secondary.withOpacity(
+                                          0.2,
+                                        ),
                                         blurRadius: 8,
                                         spreadRadius: 1,
                                       ),
                                     ]
                                   : null,
                             ),
-                            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+                            constraints: const BoxConstraints(
+                              minHeight: 44,
+                              minWidth: 44,
+                            ),
                             alignment: Alignment.center,
                             child: Text(
                               day.toString(),
                               style: TextStyle(
                                 color: fg,
-                                fontWeight: allowed ? FontWeight.w600 : FontWeight.normal,
+                                fontWeight: allowed
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
                               ),
                             ),
                           ),
                           if (isToday)
-                            Positioned(
-                              top: 6,
-                              right: 6,
-                              child: _TodayDot(),
-                            ),
+                            Positioned(top: 6, right: 6, child: _TodayDot()),
                         ],
                       ),
                     ),
@@ -594,6 +664,31 @@ class _CalendarGrid extends StatelessWidget {
   }
 }
 
+class _OtherMonthDayCell extends StatelessWidget {
+  const _OtherMonthDayCell({required this.day, this.isWeekend = false});
+  final int day;
+  final bool isWeekend;
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceVariant.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+      alignment: Alignment.center,
+      child: Text(
+        day.toString(),
+        style: TextStyle(
+          color: scheme.onSurfaceVariant.withOpacity(0.45),
+          fontWeight: FontWeight.normal,
+        ),
+      ),
+    );
+  }
+}
+
 class _DowCell extends StatelessWidget {
   const _DowCell(this.label, {this.isWeekend = false});
   final String label;
@@ -604,13 +699,12 @@ class _DowCell extends StatelessWidget {
       child: Center(
         child: Text(
           label,
-          style: Theme.of(context)
-              .textTheme
-              .labelMedium
-              ?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: isWeekend ? Theme.of(context).colorScheme.onSurfaceVariant : null,
-              ),
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: isWeekend
+                ? Theme.of(context).colorScheme.onSurfaceVariant
+                : null,
+          ),
         ),
       ),
     );
@@ -626,7 +720,9 @@ class _Legend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final Color effectiveOutline = outlineColor ?? (color != null ? color!.withOpacity(0.9) : scheme.outline);
+    final Color effectiveOutline =
+        outlineColor ??
+        (color != null ? color!.withOpacity(0.9) : scheme.outline);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -736,14 +832,13 @@ class _QuickActionBus extends ChangeNotifier {
   void triggerToday() => notifyListeners();
 }
 
-// Keyboard intents
-class _PrevMonthIntent extends Intent { const _PrevMonthIntent(); }
-class _NextMonthIntent extends Intent { const _NextMonthIntent(); }
-class _TodayIntent extends Intent { const _TodayIntent(); }
-
-// Removed color palette menu item helper as the palette menu is disabled for now.
-
-void _showDayDetails(BuildContext context, int day, bool allowed, bool isWeekend, bool isToday) {
+void _showDayDetails(
+  BuildContext context,
+  int day,
+  bool allowed,
+  bool isWeekend,
+  bool isToday,
+) {
   final ThemeData theme = Theme.of(context);
   showModalBottomSheet<void>(
     context: context,
@@ -757,17 +852,32 @@ void _showDayDetails(BuildContext context, int day, bool allowed, bool isWeekend
           children: <Widget>[
             Text('Día $day', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
-            Wrap(spacing: 12, runSpacing: 8, children: <Widget>[
-              if (isToday) const _ChipInfo(Icons.today, 'Hoy'),
-              if (allowed) const _ChipInfo(Icons.check_circle, 'Permitido'),
-              if (isWeekend) const _ChipInfo(Icons.weekend, 'Fin de semana'),
-            ]),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: <Widget>[
+                if (isToday) const _ChipInfo(Icons.today, 'Hoy'),
+                if (allowed) const _ChipInfo(Icons.check_circle, 'Permitido'),
+                if (isWeekend) const _ChipInfo(Icons.weekend, 'Fin de semana'),
+              ],
+            ),
             const SizedBox(height: 16),
             Row(
               children: <Widget>[
-                FilledButton.icon(onPressed: () => Navigator.of(ctx).pop(), icon: const Icon(Icons.close), label: const Text('Cerrar')),
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  icon: const Icon(Icons.close),
+                  label: const Text('Cerrar'),
+                ),
                 const Spacer(),
-                TextButton.icon(onPressed: () { Navigator.of(ctx).pop(); _QuickActionBus.instance.triggerToday(); }, icon: const Icon(Icons.today), label: const Text('Ir a Hoy')),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _QuickActionBus.instance.triggerToday();
+                  },
+                  icon: const Icon(Icons.today),
+                  label: const Text('Ir a Hoy'),
+                ),
               ],
             ),
           ],
@@ -779,12 +889,10 @@ void _showDayDetails(BuildContext context, int day, bool allowed, bool isWeekend
 
 class _ChipInfo extends StatelessWidget {
   const _ChipInfo(this.icon, this.label);
-  final IconData icon; final String label;
+  final IconData icon;
+  final String label;
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(icon, size: 16),
-      label: Text(label),
-    );
+    return Chip(avatar: Icon(icon, size: 16), label: Text(label));
   }
 }
