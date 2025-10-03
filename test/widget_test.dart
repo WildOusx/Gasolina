@@ -26,7 +26,7 @@ void main() {
     // Verify that an AppBar with the correct title exists.
     final Finder appBar = find.byType(AppBar);
     expect(appBar, findsOneWidget);
-    expect(find.descendant(of: appBar, matching: find.textContaining('Calendario')), findsOneWidget);
+  expect(find.descendant(of: appBar, matching: find.text('Gasolina')), findsOneWidget);
 
     // Basic smoke: ensure the plate digit selector (ChoiceChips) exists.
     expect(find.byType(ChoiceChip), findsWidgets);

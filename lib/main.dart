@@ -84,7 +84,7 @@ class _GasolinaAppState extends State<GasolinaApp> {
       );
     }
     return MaterialApp(
-      title: 'Calendario Gasolina',
+      title: 'Gasolina',
       theme: appThemeLight(accent: _accent),
       darkTheme: appThemeDark(accent: _accent),
       themeMode: _themeMode,
@@ -148,6 +148,7 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
     setState(() {
       currentMonth = DateTime(currentMonth.year, currentMonth.month - 1, 1);
     });
+    HapticFeedback.selectionClick();
     _savePrefs();
     _announceMonth();
   }
@@ -156,6 +157,7 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
     setState(() {
       currentMonth = DateTime(currentMonth.year, currentMonth.month + 1, 1);
     });
+    HapticFeedback.selectionClick();
     _savePrefs();
     _announceMonth();
   }
@@ -165,6 +167,7 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
     setState(() {
       currentMonth = DateTime(now.year, now.month, 1);
     });
+    HapticFeedback.lightImpact();
     _savePrefs();
     _announceMonth(prefix: 'Hoy:');
   }
@@ -189,43 +192,47 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
           title: const Text('Seleccionar mes y año'),
           content: SizedBox(
             width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Row(
+            child: StatefulBuilder(
+              builder: (BuildContext ctx2, StateSetter setLocalState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    IconButton(
-                      tooltip: 'Año anterior',
-                      onPressed: () => ctx.findRenderObject() != null ? setState(() => selYear--) : null,
-                      icon: const Icon(Icons.chevron_left),
+                    Row(
+                      children: <Widget>[
+                        IconButton(
+                          tooltip: 'Año anterior',
+                          onPressed: () => setLocalState(() => selYear--),
+                          icon: const Icon(Icons.chevron_left),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: Text('$selYear', style: Theme.of(context).textTheme.titleMedium),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Año siguiente',
+                          onPressed: () => setLocalState(() => selYear++),
+                          icon: const Icon(Icons.chevron_right),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: Center(
-                        child: Text('$selYear', style: Theme.of(context).textTheme.titleMedium),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Año siguiente',
-                      onPressed: () => ctx.findRenderObject() != null ? setState(() => selYear++) : null,
-                      icon: const Icon(Icons.chevron_right),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: List<Widget>.generate(12, (int i) {
+                        final int month = i + 1;
+                        final bool selected = (month == selMonth);
+                        return ChoiceChip(
+                          label: Text(_monthName(month)),
+                          selected: selected,
+                          onSelected: (_) => setLocalState(() => selMonth = month),
+                        );
+                      }),
                     ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: List<Widget>.generate(12, (int i) {
-                    final int month = i + 1;
-                    final bool selected = (month == selMonth);
-                    return ChoiceChip(
-                      label: Text(_monthName(month)),
-                      selected: selected,
-                      onSelected: (_) => setState(() => selMonth = month),
-                    );
-                  }),
-                ),
-              ],
+                );
+              },
             ),
           ),
           actions: <Widget>[
@@ -266,19 +273,8 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calendario Gasolina'),
+        title: const Text('Calendario de Gasolina'),
         actions: <Widget>[
-          if (widget.onAccentChanged != null)
-            PopupMenuButton<Color>(
-              tooltip: 'Color de acento',
-              icon: const Icon(Icons.palette_outlined),
-              onSelected: (Color c) => widget.onAccentChanged?.call(c),
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<Color>>[
-                PopupMenuItem<Color>(value: AppColors.red, child: _colorItem('Rojo', AppColors.red)),
-                PopupMenuItem<Color>(value: AppColors.darkRed, child: _colorItem('Rojo oscuro', AppColors.darkRed)),
-                PopupMenuItem<Color>(value: AppColors.navy, child: _colorItem('Navy', AppColors.navy)),
-              ],
-            ),
           if (widget.onThemeModeChanged != null)
             PopupMenuButton<ThemeMode>(
               tooltip: 'Tema',
@@ -348,7 +344,7 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                           message: 'Cambiar mes/año',
                           child: Text(
                             '${_monthName(m)} $y',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -369,7 +365,7 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text('Terminal de placa (predeterminado)', style: Theme.of(context).textTheme.titleSmall),
+                Text('Terminal de placa: ', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 8),
                 _PlateGroupChips(
                   selectedDigit: lastDigit,
@@ -424,7 +420,6 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text('Aplicacion de Prueba, detalles a mejorar'),
           ],
               ),
             ),
@@ -509,7 +504,7 @@ class _CalendarGrid extends StatelessWidget {
                 _DowCell(showFullDow ? 'Miércoles' : 'X'),
                 _DowCell(showFullDow ? 'Jueves' : 'J'),
                 _DowCell(showFullDow ? 'Viernes' : 'V'),
-                const _DowCell('Sabado', isWeekend: true),
+                _DowCell(showFullDow ? 'Sábado' : 'S', isWeekend: true),
                 _DowCell(showFullDow ? 'Domingo' : 'D', isWeekend: true),
               ],
             ),
@@ -546,7 +541,10 @@ class _CalendarGrid extends StatelessWidget {
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
-                      onTap: () => _showDayDetails(context, day, allowed, isWeekend, isToday),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        _showDayDetails(context, day, allowed, isWeekend, isToday);
+                      },
                       child: Stack(
                         children: <Widget>[
                           Container(
@@ -566,6 +564,7 @@ class _CalendarGrid extends StatelessWidget {
                                     ]
                                   : null,
                             ),
+                            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
                             alignment: Alignment.center,
                             child: Text(
                               day.toString(),
@@ -577,9 +576,9 @@ class _CalendarGrid extends StatelessWidget {
                           ),
                           if (isToday)
                             Positioned(
-                              top: 4,
-                              right: 4,
-                              child: _TodayBadge(),
+                              top: 6,
+                              right: 6,
+                              child: _TodayDot(),
                             ),
                         ],
                       ),
@@ -647,24 +646,23 @@ class _Legend extends StatelessWidget {
   }
 }
 
-class _TodayBadge extends StatelessWidget {
+class _TodayDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      width: 10,
+      height: 10,
       decoration: BoxDecoration(
         color: scheme.secondary,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        'HOY',
-        style: TextStyle(
-          color: scheme.onSecondary,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
-        ),
+        shape: BoxShape.circle,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: scheme.secondary.withOpacity(0.25),
+            blurRadius: 6,
+            spreadRadius: 1,
+          ),
+        ],
       ),
     );
   }
@@ -743,15 +741,7 @@ class _PrevMonthIntent extends Intent { const _PrevMonthIntent(); }
 class _NextMonthIntent extends Intent { const _NextMonthIntent(); }
 class _TodayIntent extends Intent { const _TodayIntent(); }
 
-Widget _colorItem(String label, Color color) {
-  return Row(
-    children: <Widget>[
-      Container(width: 14, height: 14, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-      const SizedBox(width: 8),
-      Text(label),
-    ],
-  );
-}
+// Removed color palette menu item helper as the palette menu is disabled for now.
 
 void _showDayDetails(BuildContext context, int day, bool allowed, bool isWeekend, bool isToday) {
   final ThemeData theme = Theme.of(context);
