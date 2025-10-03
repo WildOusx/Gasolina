@@ -7,24 +7,28 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:gasolina/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('App builds and shows title', (WidgetTester tester) async {
+    // Mock SharedPreferences for fast, synchronous resolution in tests.
+  SharedPreferences.setMockInitialValues(<String, Object>{});
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Build the app and trigger a frame.
+    await tester.pumpWidget(const GasolinaApp());
+    // Allow async prefs/theme load to complete.
+    for (int i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Verify that an AppBar with the correct title exists.
+    final Finder appBar = find.byType(AppBar);
+    expect(appBar, findsOneWidget);
+    expect(find.descendant(of: appBar, matching: find.textContaining('Calendario')), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Basic smoke: ensure the plate digit selector (ChoiceChips) exists.
+    expect(find.byType(ChoiceChip), findsWidgets);
   });
 }
