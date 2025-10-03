@@ -73,6 +73,7 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
     final int m = currentMonth.month;
     final List<int> days = GasSchedule.daysForDigit(year: y, month: m, lastDigit: lastDigit);
     final String pairLabel = GasSchedule.pairLabelForDigit(lastDigit);
+    final bool keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
   // final ColorScheme scheme = Theme.of(context).colorScheme; // Eliminado porque ya no se usa
     return Scaffold(
       appBar: AppBar(
@@ -114,8 +115,10 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
           child: Column(
             children: [
               // encabezado mes
@@ -153,33 +156,35 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              // calendario + calculadora
-              Expanded(
+              const SizedBox(height: 12),
+              // Calendario (solo) dentro del Card
+              Flexible(
+                fit: FlexFit.loose,
                 child: Card(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), // top padding reducido para ganar espacio
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Placa: $pairLabel', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8), // reducido para ganar espacio vertical
-                        Expanded(
-                          child: _CalendarGrid(year: y, month: m, allowedDays: Set<int>.from(days)),
-                        ),
-                        const SizedBox(height: 4), // reducido para evitar overflow
-                        // Leyendas eliminadas según solicitud
-                        Flexible(
-                          child: _EmbeddedGasCalculator(
-                            litrosCtrl: _litrosCtrl,
-                            tasa: _tasa,
-                            loading: _loadingTasa,
-                            onRefresh: _fetchTasa,
-                          ),
-                        ),
-                      ],
+                    padding: EdgeInsets.fromLTRB(10, keyboardOpen ? 2 : 8, 10, keyboardOpen ? 2 : 8),
+                    child: _CalendarSection(
+                      pairLabel: pairLabel,
+                      year: y,
+                      month: m,
+                      days: days,
+                      keyboardOpen: keyboardOpen,
                     ),
                   ),
+                ),
+              ),
+              SizedBox(height: keyboardOpen ? 2 : 8),
+              // Calculadora fuera del Card, con altura máxima en modo denso
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: keyboardOpen ? 120 : double.infinity,
+                ),
+                child: _EmbeddedGasCalculator(
+                  litrosCtrl: _litrosCtrl,
+                  tasa: _tasa,
+                  loading: _loadingTasa,
+                  onRefresh: _fetchTasa,
+                  dense: keyboardOpen,
                 ),
               ),
             ],
@@ -280,11 +285,13 @@ class _CalendarGrid extends StatelessWidget {
     required this.year,
     required this.month,
     required this.allowedDays,
+    this.baseHeightFactor = 0.95,
   });
 
   final int year;
   final int month;
   final Set<int> allowedDays;
+  final double baseHeightFactor; // altura basada en ancho, sujeta a recálculo por alto disponible
 
   int _daysInMonth(int y, int m) => DateTime(y, m + 1, 0).day;
 
@@ -292,11 +299,12 @@ class _CalendarGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final double width = constraints.maxWidth;
-        final double totalSpacing = 6 * 6;
-        final double cellWidth = (width - totalSpacing) / 7.0;
-  final double cellHeight = cellWidth * 0.95; // altura reducida un poco más para evitar overflow
-        final double aspectRatio = cellWidth / cellHeight;
+    final double width = constraints.maxWidth;
+    final double maxHeight = constraints.maxHeight; // espacio vertical asignado al calendario completo
+    const double rowSpacing = 6;
+    const double headerBottomSpacing = 8; // SizedBox after DOW row
+    final double totalSpacing = rowSpacing * 6; // horizontal spacing total en una fila
+    final double cellWidth = (width - totalSpacing) / 7.0;
         final bool showFullDow = cellWidth >= 72;
         final DateTime first = DateTime(year, month, 1);
         final int firstWeekday = first.weekday; // 1=Mon..7=Sun
@@ -304,6 +312,40 @@ class _CalendarGrid extends StatelessWidget {
         final int daysInMonth = _daysInMonth(year, month);
         int totalCells = startOffset + daysInMonth;
         if (totalCells % 7 != 0) totalCells += 7 - (totalCells % 7);
+    final int weeks = (totalCells / 7).ceil();
+
+    // Altura ideal basada en ancho
+    final double idealCellHeight = cellWidth * baseHeightFactor;
+    // Altura disponible real (restando encabezado y separaciones)
+    const double dowApproxHeight = 22;
+    final double verticalDecor = dowApproxHeight + headerBottomSpacing + (weeks - 1) * rowSpacing;
+    final double availableForCellsRaw = maxHeight - verticalDecor;
+    final double safeAvailableForCells = availableForCellsRaw > 0 ? availableForCellsRaw : 0;
+    // Máximo que puede tener cada celda para caber
+    final double maxPerCell = weeks > 0 ? safeAvailableForCells / weeks : safeAvailableForCells;
+    // Tomamos la menor entre ideal y la máxima posible
+    double cellHeight = idealCellHeight;
+    if (maxPerCell > 0 && cellHeight > maxPerCell) {
+      cellHeight = maxPerCell;
+    }
+    // Permitimos bajar más (sin forzar overflow) aunque quede por debajo de 24
+    const double minLegible = 16; // nuevo mínimo más agresivo
+    if (cellHeight < minLegible && maxPerCell > 0) {
+      cellHeight = maxPerCell; // ya es el máximo ajustado, se acepta aunque <16 si no hay espacio
+    }
+    final double aspectRatio = cellWidth / (cellHeight <= 0 ? 1 : cellHeight);
+    final double minCellSide = cellHeight < 40 ? cellHeight : 40;
+    // Ajuste de tipografía según altura
+    double? dayFontSize;
+    if (cellHeight < 18) {
+      dayFontSize = 9;
+    } else if (cellHeight < 20) {
+      dayFontSize = 10;
+    } else if (cellHeight < 24) {
+      dayFontSize = 11;
+    } else if (cellHeight < 30) {
+      dayFontSize = 12;
+    }
 
         // Previous month data
         final int prevMonth = month == 1 ? 12 : month - 1;
@@ -419,8 +461,8 @@ class _CalendarGrid extends StatelessWidget {
                                     ]
                                   : null,
                             ),
-                            constraints: const BoxConstraints(
-                              minHeight: 40, // reducido de 44 para evitar overflow
+                            constraints: BoxConstraints(
+                              minHeight: minCellSide,
                               minWidth: 40,
                             ),
                             alignment: Alignment.center,
@@ -428,9 +470,8 @@ class _CalendarGrid extends StatelessWidget {
                               day.toString(),
                               style: TextStyle(
                                 color: fg,
-                                fontWeight: allowed
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
+                                fontWeight: allowed ? FontWeight.w600 : FontWeight.normal,
+                                fontSize: dayFontSize,
                               ),
                             ),
                           ),
@@ -450,6 +491,54 @@ class _CalendarGrid extends StatelessWidget {
   }
 }
 
+// Nueva sección que contiene encabezado de placa + calendario (sin calculadora)
+class _CalendarSection extends StatelessWidget {
+  const _CalendarSection({
+    required this.pairLabel,
+    required this.year,
+    required this.month,
+    required this.days,
+    required this.keyboardOpen,
+  });
+  final String pairLabel;
+  final int year;
+  final int month;
+  final List<int> days;
+  final bool keyboardOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Placa: $pairLabel',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontSize: keyboardOpen ? 14 : null,
+                      fontWeight: FontWeight.w600,
+                    ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: keyboardOpen ? 4 : 6),
+        Expanded(
+          child: _CalendarGrid(
+            year: year,
+            month: month,
+            allowedDays: Set<int>.from(days),
+            baseHeightFactor: 0.9,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _OtherMonthDayCell extends StatelessWidget {
   const _OtherMonthDayCell({required this.day, this.isWeekend = false});
   final int day;
@@ -457,12 +546,15 @@ class _OtherMonthDayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+  // El calendario ajusta su altura automáticamente; no se requiere variable de estado del teclado aquí.
+      final bool keyboardOpenLocal = MediaQuery.of(context).viewInsets.bottom > 0;
+      final double minSide = keyboardOpenLocal ? 28 : 40;
     return Container(
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withOpacity(0.10),
         borderRadius: BorderRadius.circular(10),
       ),
-  constraints: const BoxConstraints(minHeight: 40, minWidth: 40), // reducido de 44
+  constraints: BoxConstraints(minHeight: minSide, minWidth: 40), // adaptable si teclado abierto
       alignment: Alignment.center,
       child: Text(
         day.toString(),
@@ -636,11 +728,18 @@ class _ChipInfo extends StatelessWidget {
 }
 
 class _EmbeddedGasCalculator extends StatelessWidget {
-  const _EmbeddedGasCalculator({required this.litrosCtrl, required this.tasa, required this.loading, required this.onRefresh});
+  const _EmbeddedGasCalculator({
+    required this.litrosCtrl,
+    required this.tasa,
+    required this.loading,
+    required this.onRefresh,
+    this.dense = false,
+  });
   final TextEditingController litrosCtrl;
   final double? tasa;
   final bool loading;
   final VoidCallback onRefresh;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -656,11 +755,15 @@ class _EmbeddedGasCalculator extends StatelessWidget {
     final NumberFormat fmtBs  = NumberFormat.currency(locale: 'es_VE', symbol: 'Bs', decimalDigits: 2);
     final NumberFormat fmtTasa = NumberFormat('#,##0.00', 'es_VE');
     final scheme = Theme.of(context).colorScheme;
+    final double vPad = dense ? 2 : 10;
+    final double hPad = dense ? 8 : 14;
+    final double titleFontSize = dense ? 13 : Theme.of(context).textTheme.titleMedium?.fontSize ?? 16;
+    final double valueFontSize = dense ? 13 : Theme.of(context).textTheme.titleMedium?.fontSize ?? 16;
     return Container(
-      margin: EdgeInsets.zero, // margen removido para recuperar altura
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // padding vertical reducido
+      margin: EdgeInsets.zero,
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(dense ? 10 : 16),
         color: scheme.surfaceVariant.withOpacity(0.15),
       ),
       child: Column(
@@ -670,7 +773,11 @@ class _EmbeddedGasCalculator extends StatelessWidget {
           Row(children: [
             const Icon(Icons.local_gas_station),
             const SizedBox(width: 8),
-            Text('Calculadora de Gasolina', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Calculadora de Gasolina',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: titleFontSize),
+              overflow: TextOverflow.ellipsis,
+            ),
             const Spacer(),
             IconButton(
               onPressed: loading ? null : onRefresh,
@@ -680,30 +787,36 @@ class _EmbeddedGasCalculator extends StatelessWidget {
                   : const Icon(Icons.refresh),
             ),
           ]),
-          const SizedBox(height: 8),
+          SizedBox(height: dense ? 4 : 8),
           TextField(
             controller: litrosCtrl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(isDense: true, labelText: 'Litros', prefixIcon: Icon(Icons.local_gas_station)),
             onChanged: (_) => (context as Element).markNeedsBuild(),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: dense ? 6 : 12),
             // Mostrar primero el total en Bolívares (monto mayor)
             if (totalBs != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: EdgeInsets.only(bottom: dense ? 2 : 4),
                 child: Row(children: [
                   const Text('Total en Bs: ', style: TextStyle(fontWeight: FontWeight.w600)),
-                  Text(fmtBs.format(totalBs), style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    fmtBs.format(totalBs),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: valueFontSize),
+                  ),
                 ]),
               ),
             // Luego el total en USD con símbolo correcto
             if (totalUsd != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: EdgeInsets.only(bottom: dense ? 2 : 4),
                 child: Row(children: [
                   const Text('Total en USD: ', style: TextStyle(fontWeight: FontWeight.w600)),
-                  Text('\$ ${fmtUsd.format(totalUsd)}', style: Theme.of(context).textTheme.titleMedium),
+                     Text(
+                       '\$${fmtUsd.format(totalUsd)}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: valueFontSize),
+                  ),
                 ]),
               ),
           if (tasa != null)
