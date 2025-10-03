@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:quick_actions/quick_actions.dart';
 
 import 'data/bcv_service.dart';
 import 'data/schedules.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:quick_actions/quick_actions.dart';
 import 'theme.dart';
 
 void main() {
-  // Configure home screen quick actions (Android/iOS)
   const QuickActions quickActions = QuickActions();
   quickActions.initialize((String type) async {
     if (type == 'action_today') {
@@ -22,226 +22,95 @@ void main() {
       icon: 'ic_launcher',
     ),
   ]);
-
   runApp(const GasolinaApp());
 }
 
 class GasolinaApp extends StatefulWidget {
   const GasolinaApp({super.key});
-
   @override
   State<GasolinaApp> createState() => _GasolinaAppState();
 }
 
 class _GasolinaAppState extends State<GasolinaApp> {
-  Color _accent = AppColors.red;
-  bool _loaded = false;
   ThemeMode _themeMode = ThemeMode.system;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadThemePrefs();
-  }
-
-  Future<void> _loadThemePrefs() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final int? c = prefs.getInt('accent_color');
-    final String? mode = prefs.getString('theme_mode');
-    setState(() {
-      if (c != null) _accent = Color(c);
-      if (mode != null) {
-        switch (mode) {
-          case 'light':
-            _themeMode = ThemeMode.light;
-            break;
-          case 'dark':
-            _themeMode = ThemeMode.dark;
-            break;
-          default:
-            _themeMode = ThemeMode.system;
-        }
-      }
-      _loaded = true;
-    });
-  }
-
-  Future<void> _setAccent(Color c) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // Usar .value para persistencia (toArgb no existe en Flutter estable)
-    await prefs.setInt('accent_color', c.value);
-    setState(() => _accent = c);
-  }
-
-  Future<void> _setThemeMode(ThemeMode mode) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    String key = 'system';
-    if (mode == ThemeMode.light) key = 'light';
-    if (mode == ThemeMode.dark) key = 'dark';
-    await prefs.setString('theme_mode', key);
-    setState(() => _themeMode = mode);
-  }
+  bool _loaded = true; // simplificado
 
   @override
   Widget build(BuildContext context) {
     if (!_loaded) {
-      return MaterialApp(
-        theme: appThemeLight(),
-        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
-        debugShowCheckedModeBanner: false,
+      return const MaterialApp(
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
     return MaterialApp(
-      title: 'Gasolina',
-      theme: appThemeLight(accent: _accent),
-      darkTheme: appThemeDark(accent: _accent),
-      themeMode: _themeMode,
-      home: GasCalendarScreen(
-        onAccentChanged: _setAccent,
-        themeMode: _themeMode,
-        onThemeModeChanged: _setThemeMode,
-      ),
       debugShowCheckedModeBanner: false,
+      themeMode: _themeMode,
+  theme: appThemeLight(),
+  darkTheme: appThemeDark(),
+      home: GasCalendarScreen(
+        themeMode: _themeMode,
+        onThemeModeChanged: (ThemeMode m) => setState(() => _themeMode = m),
+      ),
     );
   }
 }
 
 class GasCalendarScreen extends StatefulWidget {
-  const GasCalendarScreen({
-    super.key,
-    this.onAccentChanged,
-    this.themeMode = ThemeMode.system,
-    this.onThemeModeChanged,
-  });
-
-  final ValueChanged<Color>? onAccentChanged;
+  const GasCalendarScreen({super.key, required this.themeMode, required this.onThemeModeChanged});
   final ThemeMode themeMode;
-  final ValueChanged<ThemeMode>? onThemeModeChanged;
-
+  final ValueChanged<ThemeMode> onThemeModeChanged;
   @override
   State<GasCalendarScreen> createState() => _GasCalendarScreenState();
 }
 
 class _GasCalendarScreenState extends State<GasCalendarScreen> {
-  // initState ya está correctamente definido más abajo
-  // Navega al mes actual (hoy)
-  void _goToday() {
-    // TODO: Implementar funcionalidad para ir al mes actual
-    // Por ahora solo es un stub para evitar el error
-  }
-
-  // Navega al mes anterior
-  void _prevMonth() {
-    // TODO: Implementar funcionalidad para ir al mes anterior
-    // Por ahora solo es un stub para evitar el error
-  }
-
-  // Navega al mes siguiente
-  void _nextMonth() {
-    // TODO: Implementar funcionalidad para ir al mes siguiente
-    // Por ahora solo es un stub para evitar el error
-  }
-
-  // Guarda preferencias del usuario
-  void _savePrefs() {
-    // TODO: Implementar guardado de preferencias si se desea funcionalidad completa
-    // Por ahora solo es un stub para evitar el error
-  }
-
-  // --- Calculadora de gasolina ---
-  void _openGasCalculator() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (BuildContext ctx) => const GasCalculatorSheet(),
-    );
-  }
-
-  Future<void> _loadPrefs() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final int? digit = prefs.getInt('last_digit');
-    if (digit != null && digit >= 0 && digit <= 9) {
-      lastDigit = digit;
-    }
-    setState(() {
-      _loadingPrefs = false;
-    });
-  }
-
-  late DateTime currentMonth; // anclado al día 1 del mes visible
-  int lastDigit = 1;
-  bool _loadingPrefs = true;
-
-  @override
-  void initState() {
-    super.initState();
-    // Inicializa currentMonth al primer día del mes actual
-    final now = DateTime.now();
-    currentMonth = DateTime(now.year, now.month, 1);
-    _loadPrefs();
-  }
-
-  // Abre el selector de mes/a[0mo
-  Future<void> _openMonthYearPicker() async {
-    // TODO: Implementar selector de mes/a[0mo si se desea funcionalidad completa
-    // Por ahora solo es un stub para evitar el error
-  }
-
   @override
   Widget build(BuildContext context) {
-    final int y = currentMonth.year;
-    final int m = currentMonth.month;
-    final List<int> days = GasSchedule.daysForDigit(
-      year: y,
-      month: m,
-      lastDigit: lastDigit,
-    );
-    final String pairLabel = GasSchedule.pairLabelForDigit(lastDigit);
-
     if (_loadingPrefs) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
+    final int y = currentMonth.year;
+    final int m = currentMonth.month;
+    final List<int> days = GasSchedule.daysForDigit(year: y, month: m, lastDigit: lastDigit);
+    final String pairLabel = GasSchedule.pairLabelForDigit(lastDigit);
+  // final ColorScheme scheme = Theme.of(context).colorScheme; // Eliminado porque ya no se usa
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendario de Gasolina'),
-        actions: <Widget>[
+        actions: [
           IconButton(
             tooltip: 'Ir a hoy',
             icon: const Icon(Icons.today),
             onPressed: _goToday,
           ),
-          if (widget.onThemeModeChanged != null)
-            PopupMenuButton<ThemeMode>(
-              tooltip: 'Tema',
-              icon: Icon(
-                widget.themeMode == ThemeMode.dark
-                    ? Icons.dark_mode
-                    : (widget.themeMode == ThemeMode.light
-                          ? Icons.light_mode
-                          : Icons.brightness_auto),
-              ),
-              onSelected: (ThemeMode m) => widget.onThemeModeChanged?.call(m),
-              itemBuilder: (BuildContext context) =>
-                  <PopupMenuEntry<ThemeMode>>[
-                    CheckedPopupMenuItem<ThemeMode>(
-                      value: ThemeMode.system,
-                      checked: widget.themeMode == ThemeMode.system,
-                      child: const Text('Sistema'),
-                    ),
-                    CheckedPopupMenuItem<ThemeMode>(
-                      value: ThemeMode.light,
-                      checked: widget.themeMode == ThemeMode.light,
-                      child: const Text('Claro'),
-                    ),
-                    CheckedPopupMenuItem<ThemeMode>(
-                      value: ThemeMode.dark,
-                      checked: widget.themeMode == ThemeMode.dark,
-                      child: const Text('Oscuro'),
-                    ),
-                  ],
+          PopupMenuButton<ThemeMode>(
+            tooltip: 'Tema',
+            icon: Icon(
+              widget.themeMode == ThemeMode.dark
+                  ? Icons.dark_mode
+                  : (widget.themeMode == ThemeMode.light
+                      ? Icons.light_mode
+                      : Icons.brightness_auto),
             ),
+            onSelected: widget.onThemeModeChanged,
+            itemBuilder: (_) => <PopupMenuEntry<ThemeMode>>[
+              CheckedPopupMenuItem(
+                value: ThemeMode.system,
+                checked: widget.themeMode == ThemeMode.system,
+                child: const Text('Sistema'),
+              ),
+              CheckedPopupMenuItem(
+                value: ThemeMode.light,
+                checked: widget.themeMode == ThemeMode.light,
+                child: const Text('Claro'),
+              ),
+              CheckedPopupMenuItem(
+                value: ThemeMode.dark,
+                checked: widget.themeMode == ThemeMode.dark,
+                child: const Text('Oscuro'),
+              ),
+            ],
+          ),
         ],
       ),
       body: SafeArea(
@@ -249,174 +118,64 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Encabezado y chips
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (Widget child, Animation<double> anim) {
-                  final Animation<Offset> slide = Tween<Offset>(
-                    begin: const Offset(0.15, 0),
-                    end: Offset.zero,
-                  ).animate(anim);
-                  return SlideTransition(
-                    position: slide,
-                    child: FadeTransition(opacity: anim, child: child),
-                  );
-                },
-                child: KeyedSubtree(
-                  key: ValueKey<String>('month-$y-$m'),
-                  child: Row(
-                    children: <Widget>[
-                      IconButton(
-                        tooltip: 'Mes anterior',
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: _prevMonth,
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(8),
-                            onTap: _openMonthYearPicker,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              child: Tooltip(
-                                message: 'Cambiar mes/año',
-                                child: Text(
-                                  '${_monthName(m)} $y',
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(fontWeight: FontWeight.w700),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                          ),
+              // encabezado mes
+              Row(
+                children: [
+                  IconButton(onPressed: _prevMonth, icon: const Icon(Icons.chevron_left), tooltip: 'Mes anterior'),
+                  Expanded(
+                    child: Center(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: _openMonthYearPicker,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          child: Text('${_monthName(m)} $y', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                         ),
                       ),
-                      IconButton(
-                        tooltip: 'Mes siguiente',
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: _nextMonth,
-                      ),
-                      const SizedBox(width: 8),
-                    ],
+                    ),
                   ),
-                ),
+                  IconButton(onPressed: _nextMonth, icon: const Icon(Icons.chevron_right), tooltip: 'Mes siguiente'),
+                ],
               ),
               const SizedBox(height: 8),
+              // selector placa
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Terminal de placa: ',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
+                children: [
+                  Text('Terminal de placa:', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    child: KeyedSubtree(
-                      key: ValueKey<int>(lastDigit),
-                      child: _PlateGroupChips(
-                        selectedDigit: lastDigit,
-                        onChanged: (int d) {
-                          setState(() => lastDigit = d);
-                          _savePrefs();
-                        },
-                      ),
-                    ),
+                  _PlateGroupChips(
+                    selectedDigit: lastDigit,
+                    onChanged: (d) {
+                      setState(() => lastDigit = d);
+                      _savePrefs();
+                    },
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              // Calendario expandido
+              // calendario + calculadora
               Expanded(
                 child: Card(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), // top padding reducido para ganar espacio
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          'Placa: $pairLabel',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 12),
+                      children: [
+                        Text('Placa: $pairLabel', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8), // reducido para ganar espacio vertical
                         Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            switchInCurve: Curves.easeOut,
-                            switchOutCurve: Curves.easeIn,
-                            transitionBuilder:
-                                (Widget child, Animation<double> anim) {
-                                  final Animation<Offset> offset =
-                                      Tween<Offset>(
-                                        begin: const Offset(0.1, 0),
-                                        end: Offset.zero,
-                                      ).animate(
-                                        CurvedAnimation(
-                                          parent: anim,
-                                          curve: Curves.easeOut,
-                                        ),
-                                      );
-                                  return SlideTransition(
-                                    position: offset,
-                                    child: FadeTransition(
-                                      opacity: anim,
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                            child: KeyedSubtree(
-                              key: ValueKey<String>(
-                                'cal-$y-$m-${lastDigit.toString()}',
-                              ),
-                              child: _CalendarGrid(
-                                year: y,
-                                month: m,
-                                allowedDays: Set<int>.from(days),
-                              ),
-                            ),
-                          ),
+                          child: _CalendarGrid(year: y, month: m, allowedDays: Set<int>.from(days)),
                         ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 16,
-                          runSpacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: <Widget>[
-                            _Legend(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primaryContainer,
-                              label: 'Permitido',
-                            ),
-                            _Legend(
-                              outlineColor: Theme.of(
-                                context,
-                              ).colorScheme.primary,
-                              label: 'Hoy',
-                            ),
-                            _Legend(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest
-                                  .withOpacity(0.22),
-                              label: 'Fin de semana',
-                            ),
-                            _Legend(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest
-                                  .withOpacity(0.10),
-                              label: 'Otro mes',
-                            ),
-                          ],
+                        const SizedBox(height: 4), // reducido para evitar overflow
+                        // Leyendas eliminadas según solicitud
+                        Flexible(
+                          child: _EmbeddedGasCalculator(
+                            litrosCtrl: _litrosCtrl,
+                            tasa: _tasa,
+                            loading: _loadingTasa,
+                            onRefresh: _fetchTasa,
+                          ),
                         ),
                       ],
                     ),
@@ -427,31 +186,92 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openGasCalculator,
-        icon: const Icon(Icons.local_gas_station),
-        label: const Text('Calculadora'),
-        tooltip: 'Calculadora de precio de gasolina',
-      ),
     );
   }
+  late DateTime currentMonth; // primer día del mes visible
+  int lastDigit = 1;
+  bool _loadingPrefs = true;
 
-  String _monthName(int m) {
-    const List<String> names = <String>[
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
+  // Calculadora embebida
+  final TextEditingController _litrosCtrl = TextEditingController();
+  double? _tasa;
+  bool _loadingTasa = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    currentMonth = DateTime(now.year, now.month, 1);
+    _loadPrefs();
+    _fetchTasa();
+  }
+
+  @override
+  void dispose() {
+    _litrosCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPrefs() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final int? digit = prefs.getInt('last_digit');
+    if (digit != null && digit >= 0 && digit <= 9) {
+      lastDigit = digit;
+    }
+    setState(() => _loadingPrefs = false);
+  }
+
+  Future<void> _savePrefs() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('last_digit', lastDigit);
+  }
+
+  void _goToday() {
+    final DateTime now = DateTime.now();
+    setState(() => currentMonth = DateTime(now.year, now.month, 1));
+  }
+
+  void _prevMonth() {
+    setState(() {
+      final int y = currentMonth.year;
+      final int m = currentMonth.month;
+      currentMonth = (m == 1) ? DateTime(y - 1, 12, 1) : DateTime(y, m - 1, 1);
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      final int y = currentMonth.year;
+      final int m = currentMonth.month;
+      currentMonth = (m == 12) ? DateTime(y + 1, 1, 1) : DateTime(y, m + 1, 1);
+    });
+  }
+
+  Future<void> _fetchTasa() async {
+    setState(() {
+      _loadingTasa = true;
+    });
+    try {
+      final double? tasa = await BcvService.fetchUsdRate();
+      setState(() {
+        _tasa = tasa;
+        _loadingTasa = false;
+      });
+    } catch (_) {
+      setState(() => _loadingTasa = false);
+    }
+  }
+
+  void _openMonthYearPicker() {
+    // Placeholder: implement month/year picker if needed
+  }
+
+  String _monthName(int month) {
+    const months = [
+      '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
-    return names[m - 1];
+    return months[month];
   }
 }
 
@@ -475,7 +295,7 @@ class _CalendarGrid extends StatelessWidget {
         final double width = constraints.maxWidth;
         final double totalSpacing = 6 * 6;
         final double cellWidth = (width - totalSpacing) / 7.0;
-        final double cellHeight = cellWidth * 1.05;
+  final double cellHeight = cellWidth * 0.95; // altura reducida un poco más para evitar overflow
         final double aspectRatio = cellWidth / cellHeight;
         final bool showFullDow = cellWidth >= 72;
         final DateTime first = DateTime(year, month, 1);
@@ -600,8 +420,8 @@ class _CalendarGrid extends StatelessWidget {
                                   : null,
                             ),
                             constraints: const BoxConstraints(
-                              minHeight: 44,
-                              minWidth: 44,
+                              minHeight: 40, // reducido de 44 para evitar overflow
+                              minWidth: 40,
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -642,7 +462,7 @@ class _OtherMonthDayCell extends StatelessWidget {
         color: scheme.surfaceContainerHighest.withOpacity(0.10),
         borderRadius: BorderRadius.circular(10),
       ),
-      constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+  constraints: const BoxConstraints(minHeight: 40, minWidth: 40), // reducido de 44
       alignment: Alignment.center,
       child: Text(
         day.toString(),
@@ -677,36 +497,7 @@ class _DowCell extends StatelessWidget {
   }
 }
 
-class _Legend extends StatelessWidget {
-  const _Legend({this.color, this.outlineColor, required this.label});
-  final Color? color;
-  final Color? outlineColor;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    final Color effectiveOutline =
-        outlineColor ??
-        (color != null ? color!.withOpacity(0.9) : scheme.outline);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Container(
-          width: 14,
-          height: 14,
-          decoration: BoxDecoration(
-            color: color,
-            border: Border.all(color: effectiveOutline, width: 2),
-            borderRadius: BorderRadius.circular(7),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(label, style: Theme.of(context).textTheme.labelMedium),
-      ],
-    );
-  }
-}
+// Clase _Legend eliminada porque ya no se usa
 
 class _TodayDot extends StatelessWidget {
   @override
@@ -798,58 +589,41 @@ class _QuickActionBus extends ChangeNotifier {
   void triggerToday() => notifyListeners();
 }
 
-void _showDayDetails(
-  BuildContext context,
-  int day,
-  bool allowed,
-  bool isWeekend,
-  bool isToday,
-) {
-  final ThemeData theme = Theme.of(context);
-  showModalBottomSheet<void>(
+void _showDayDetails(BuildContext context, int day, bool allowed, bool isWeekend, bool isToday) {
+  final theme = Theme.of(context);
+  showModalBottomSheet(
     context: context,
     showDragHandle: true,
-    builder: (BuildContext ctx) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text('Día $day', style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: <Widget>[
-                if (isToday) const _ChipInfo(Icons.today, 'Hoy'),
-                if (allowed) const _ChipInfo(Icons.check_circle, 'Permitido'),
-                if (isWeekend) const _ChipInfo(Icons.weekend, 'Fin de semana'),
-              ],
+    builder: (ctx) => Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Día $day', style: theme.textTheme.titleLarge),
+          const SizedBox(height: 8),
+            Wrap(spacing: 12, runSpacing: 8, children: [
+              if (isToday) const _ChipInfo(Icons.today, 'Hoy'),
+              if (allowed) const _ChipInfo(Icons.check_circle, 'Permitido'),
+              if (isWeekend) const _ChipInfo(Icons.weekend, 'Fin de semana'),
+            ]),
+          const SizedBox(height: 16),
+          Row(children: [
+            FilledButton.icon(
+              onPressed: () => Navigator.of(ctx).pop(),
+              icon: const Icon(Icons.close),
+              label: const Text('Cerrar'),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: <Widget>[
-                FilledButton.icon(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  icon: const Icon(Icons.close),
-                  label: const Text('Cerrar'),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    _QuickActionBus.instance.triggerToday();
-                  },
-                  icon: const Icon(Icons.today),
-                  label: const Text('Ir a Hoy'),
-                ),
-              ],
+            const Spacer(),
+            TextButton.icon(
+              onPressed: () { Navigator.of(ctx).pop(); _QuickActionBus.instance.triggerToday(); },
+              icon: const Icon(Icons.today),
+              label: const Text('Ir a Hoy'),
             ),
-          ],
-        ),
-      );
-    },
+          ]),
+        ],
+      ),
+    ),
   );
 }
 
@@ -858,129 +632,84 @@ class _ChipInfo extends StatelessWidget {
   final IconData icon;
   final String label;
   @override
-  Widget build(BuildContext context) {
-    return Chip(avatar: Icon(icon, size: 16), label: Text(label));
-  }
+  Widget build(BuildContext context) => Chip(avatar: Icon(icon, size: 16), label: Text(label));
 }
 
-// --- Calculadora de gasolina ---
-class GasCalculatorSheet extends StatefulWidget {
-  const GasCalculatorSheet({super.key});
-
-  @override
-  State<GasCalculatorSheet> createState() => _GasCalculatorSheetState();
-}
-
-class _GasCalculatorSheetState extends State<GasCalculatorSheet> {
-  final TextEditingController _litrosCtrl = TextEditingController();
-  double? _tasa;
-  bool _loading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchTasa();
-  }
-
-  Future<void> _fetchTasa() async {
-    setState(() {
-      _loading = true;
-    });
-    try {
-      final tasa = await BcvService.fetchUsdRate();
-      setState(() {
-        _tasa = tasa;
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _loading = false;
-      });
-    }
-  }
+class _EmbeddedGasCalculator extends StatelessWidget {
+  const _EmbeddedGasCalculator({required this.litrosCtrl, required this.tasa, required this.loading, required this.onRefresh});
+  final TextEditingController litrosCtrl;
+  final double? tasa;
+  final bool loading;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    double? litros = double.tryParse(_litrosCtrl.text.replaceAll(',', '.'));
+    final double? litros = double.tryParse(litrosCtrl.text.replaceAll(',', '.'));
     double? totalUsd;
     double? totalBs;
     if (litros != null) {
-      totalUsd = litros / 2;
-      if (_tasa != null) {
-        totalBs = totalUsd * _tasa!;
-      }
+      totalUsd = litros / 2; // regla solicitada
+      if (tasa != null) totalBs = totalUsd * tasa!; // conversión con BCV
     }
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+  // Formateo USD: evitamos símbolo corrupto usando formato numérico y agregamos '$' manualmente
+  final NumberFormat fmtUsd = NumberFormat('#,##0.00', 'es_VE');
+    final NumberFormat fmtBs  = NumberFormat.currency(locale: 'es_VE', symbol: 'Bs', decimalDigits: 2);
+    final NumberFormat fmtTasa = NumberFormat('#,##0.00', 'es_VE');
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: EdgeInsets.zero, // margen removido para recuperar altura
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // padding vertical reducido
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: scheme.surfaceVariant.withOpacity(0.15),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.local_gas_station, size: 28),
-              const SizedBox(width: 10),
-              Text('Calculadora de Gasolina', style: Theme.of(context).textTheme.titleLarge),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Actualizar tasa',
-                onPressed: _loading ? null : _fetchTasa,
-              ),
-            ],
+          Row(children: [
+            const Icon(Icons.local_gas_station),
+            const SizedBox(width: 8),
+            Text('Calculadora de Gasolina', style: Theme.of(context).textTheme.titleMedium),
+            const Spacer(),
+            IconButton(
+              onPressed: loading ? null : onRefresh,
+              tooltip: 'Actualizar tasa',
+              icon: loading
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.refresh),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          TextField(
+            controller: litrosCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(isDense: true, labelText: 'Litros', prefixIcon: Icon(Icons.local_gas_station)),
+            onChanged: (_) => (context as Element).markNeedsBuild(),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _litrosCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Litros',
-              prefixIcon: Icon(Icons.local_gas_station),
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 18),
-          if (totalUsd != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  const Text('Total en USD: ', style: TextStyle(fontWeight: FontWeight.w600)),
-                  Text('4${totalUsd.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
-                ],
-              ),
-            ),
-          if (totalBs != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
+            // Mostrar primero el total en Bolívares (monto mayor)
+            if (totalBs != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(children: [
                   const Text('Total en Bs: ', style: TextStyle(fontWeight: FontWeight.w600)),
-                  Text('Bs ${totalBs.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
-                ],
+                  Text(fmtBs.format(totalBs), style: Theme.of(context).textTheme.titleMedium),
+                ]),
               ),
-            ),
-          if (_tasa != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text('Tasa BCV: ${_tasa!.toStringAsFixed(2)} Bs/USD', style: Theme.of(context).textTheme.bodySmall),
-            ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close),
-                label: const Text('Cerrar'),
+            // Luego el total en USD con símbolo correcto
+            if (totalUsd != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(children: [
+                  const Text('Total en USD: ', style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text('\$ ${fmtUsd.format(totalUsd)}', style: Theme.of(context).textTheme.titleMedium),
+                ]),
               ),
-            ],
-          ),
+          if (tasa != null)
+            Text('Tasa BCV: ${fmtTasa.format(tasa)} Bs/USD', style: Theme.of(context).textTheme.bodySmall),
+          if (tasa == null && !loading)
+            Text('No se pudo obtener la tasa. Reintenta.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.error)),
         ],
       ),
     );

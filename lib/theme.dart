@@ -160,3 +160,7 @@ ThemeData appThemeDark({Color accent = AppColors.red}) {
     ),
   );
 }
+
+// Wrappers para mantener compatibilidad con código previo
+ThemeData buildLightTheme(Color accent) => appThemeLight(accent: accent);
+ThemeData buildDarkTheme(Color accent) => appThemeDark(accent: accent);
