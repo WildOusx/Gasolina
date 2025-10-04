@@ -444,7 +444,7 @@ class _CalendarGrid extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
               decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withOpacity(0.10),
+                color: scheme.surfaceContainerHighest.withAlpha((0.10 * 255).round()),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -498,11 +498,11 @@ class _CalendarGrid extends StatelessWidget {
                   final Color bg = allowed
                       ? scheme.primaryContainer
                       : (isWeekend
-                            ? scheme.surfaceContainerHighest.withOpacity(0.18)
-                            : scheme.surfaceContainerHighest.withOpacity(0.28));
+                            ? scheme.surfaceContainerHighest.withAlpha((0.18 * 255).round())
+                            : scheme.surfaceContainerHighest.withAlpha((0.28 * 255).round()));
                   final Color fg = allowed
                       ? scheme.onPrimaryContainer
-                      : scheme.onSurfaceVariant.withOpacity(0.85);
+                      : scheme.onSurfaceVariant.withAlpha((0.85 * 255).round());
                   return Semantics(
                     label:
                         'Día $day${isToday ? ', hoy' : ''}${allowed ? ', permitido' : ''}${isWeekend ? ', fin de semana' : ''}',
@@ -511,8 +511,8 @@ class _CalendarGrid extends StatelessWidget {
                       color: Colors.transparent,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
-                        splashColor: scheme.primary.withOpacity(0.10),
-                        highlightColor: scheme.primary.withOpacity(0.08),
+                        splashColor: scheme.primary.withAlpha((0.10 * 255).round()),
+                        highlightColor: scheme.primary.withAlpha((0.08 * 255).round()),
                         onTap: () {
                           HapticFeedback.selectionClick();
                           _showDayDetails(
@@ -542,9 +542,7 @@ class _CalendarGrid extends StatelessWidget {
                                 boxShadow: isToday
                                     ? <BoxShadow>[
                                         BoxShadow(
-                                          color: scheme.secondary.withOpacity(
-                                            0.18,
-                                          ),
+                                          color: scheme.secondary.withAlpha((0.18 * 255).round()),
                                           blurRadius: 8,
                                           spreadRadius: 1,
                                         ),
@@ -725,7 +723,7 @@ class _TodayDot extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: scheme.secondary.withOpacity(0.25),
+            color: scheme.secondary.withAlpha((0.25 * 255).round()),
             blurRadius: 6,
             spreadRadius: 1,
           ),
@@ -790,20 +788,18 @@ class _PlateGroupChips extends StatelessWidget {
                 ),
                 selected: selected,
                 selectedColor: scheme.primaryContainer,
-                backgroundColor: scheme.surfaceContainerHighest.withOpacity(
-                  0.10,
-                ),
+                backgroundColor: scheme.surfaceContainerHighest.withAlpha((0.10 * 255).round()),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(11),
                   side: selected
                       ? BorderSide(color: scheme.primary, width: 1)
                       : BorderSide(
-                          color: scheme.outline.withOpacity(0.12),
+                          color: scheme.outline.withAlpha((0.12 * 255).round()),
                           width: 1,
                         ),
                 ),
                 elevation: selected ? 1 : 0,
-                shadowColor: scheme.primary.withOpacity(0.06),
+                shadowColor: scheme.primary.withAlpha((0.06 * 255).round()),
                 onSelected: (bool s) {
                   if (s) onChanged(repDigit);
                 },
@@ -978,10 +974,10 @@ class _EmbeddedGasCalculatorState extends State<_EmbeddedGasCalculator> {
       padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(dense ? 14 : 20),
-        color: scheme.surfaceContainerHighest.withOpacity(0.18),
+  color: scheme.surfaceContainerHighest.withAlpha((0.18 * 255).round()),
         boxShadow: [
           BoxShadow(
-            color: scheme.primary.withOpacity(0.04),
+            color: scheme.primary.withAlpha((0.04 * 255).round()),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -995,7 +991,7 @@ class _EmbeddedGasCalculatorState extends State<_EmbeddedGasCalculator> {
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: scheme.primary.withOpacity(0.13),
+                  color: scheme.primary.withAlpha((0.13 * 255).round()),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 padding: const EdgeInsets.all(6),
@@ -1050,11 +1046,11 @@ class _EmbeddedGasCalculatorState extends State<_EmbeddedGasCalculator> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
-                    color: scheme.primary.withOpacity(0.18),
+                    color: scheme.primary.withAlpha((0.18 * 255).round()),
                   ),
                 ),
                 filled: true,
-                fillColor: scheme.surfaceContainerHighest.withOpacity(0.10),
+                fillColor: scheme.surfaceContainerHighest.withAlpha((0.10 * 255).round()),
               ),
             ),
           ),
