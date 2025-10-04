@@ -81,7 +81,6 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
       lastDigit: lastDigit,
     );
     final String pairLabel = GasSchedule.pairLabelForDigit(lastDigit);
-    final bool keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendario de Gasolina'),
@@ -135,7 +134,6 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                   year: y,
                   month: m,
                   days: days,
-                  keyboardOpen: keyboardOpen,
                 ),
               ),
             );
@@ -148,7 +146,6 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                   tasa: _tasa,
                   loading: _loadingTasa,
                   onRefresh: _fetchTasa,
-                  dense: keyboardOpen,
                 ),
               ),
             );
@@ -216,12 +213,18 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(flex: 2, child: calendarWidget),
+                          SizedBox(
+                            width:
+                                (constraints.maxWidth - spacing - 340) * 2 / 3,
+                            child: calendarWidget,
+                          ),
                           SizedBox(width: spacing),
                           ConstrainedBox(
                             constraints: const BoxConstraints(
                               maxWidth: 340,
                               minWidth: 220,
+                              minHeight: 220,
+                              maxHeight: 340,
                             ),
                             child: calculatorWidget,
                           ),
@@ -242,10 +245,10 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                     SizedBox(height: spacing),
                     ConstrainedBox(
                       constraints: const BoxConstraints(
-                        minHeight: 140,
+                        minHeight: 160,
                         maxHeight: 320,
                       ),
-                      child: SingleChildScrollView(child: calculatorWidget),
+                      child: calculatorWidget,
                     ),
                   ],
                 ),
@@ -271,8 +274,11 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
     super.initState();
     final now = DateTime.now();
     currentMonth = DateTime(now.year, now.month, 1);
-    _loadPrefs();
-    _fetchTasa();
+    _initAsync();
+  }
+
+  Future<void> _initAsync() async {
+    await Future.wait([_loadPrefs(), _fetchTasa()]);
   }
 
   @override
@@ -598,43 +604,69 @@ class _CalendarSection extends StatelessWidget {
     required this.year,
     required this.month,
     required this.days,
-    required this.keyboardOpen,
   });
   final String pairLabel;
   final int year;
   final int month;
   final List<int> days;
-  final bool keyboardOpen;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Placa: $pairLabel',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: keyboardOpen ? 14 : null,
-                  fontWeight: FontWeight.w600,
+    // Eliminado: variable local keyboardOpen no usada
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+        // Si el espacio vertical es muy pequeño o el teclado está abierto, solo muestra el encabezado
+        if (keyboardOpen || constraints.maxHeight < 120) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Placa: $pairLabel',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                overflow: TextOverflow.ellipsis,
-              ),
+              ],
             ),
-          ],
-        ),
-        SizedBox(height: keyboardOpen ? 4 : 6),
-        Expanded(
-          child: _CalendarGrid(
-            year: year,
-            month: month,
-            allowedDays: Set<int>.from(days),
-            baseHeightFactor: 0.9,
-          ),
-        ),
-      ],
+          );
+        } else {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Placa: $pairLabel',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 400),
+                  child: _CalendarGrid(
+                    year: year,
+                    month: month,
+                    allowedDays: Set<int>.from(days),
+                    baseHeightFactor: 0.9,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+      },
     );
   }
 }
@@ -646,24 +678,11 @@ class _OtherMonthDayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    // El calendario ajusta su altura automáticamente; no se requiere variable de estado del teclado aquí.
-    final bool keyboardOpenLocal = MediaQuery.of(context).viewInsets.bottom > 0;
-    final double minSide = keyboardOpenLocal ? 28 : 40;
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      constraints: BoxConstraints(
-        minHeight: minSide,
-        minWidth: 40,
-      ), // adaptable si teclado abierto
-      alignment: Alignment.center,
+    return Center(
       child: Text(
         day.toString(),
-        style: TextStyle(
-          color: scheme.onSurfaceVariant.withOpacity(0.45),
-          fontWeight: FontWeight.normal,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: isWeekend ? scheme.onSurfaceVariant : null,
         ),
       ),
     );
@@ -737,47 +756,61 @@ class _PlateGroupChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double baseFontSize = screenWidth < 400 ? 10 : 12;
     final TextStyle chipTextStyle = Theme.of(context).textTheme.labelMedium!
         .copyWith(
           fontWeight: FontWeight.w600,
-          fontSize: 11,
+          fontSize: baseFontSize,
           letterSpacing: 0.06,
         );
+    final EdgeInsetsGeometry chipPadding = screenWidth < 400
+        ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
+        : const EdgeInsets.symmetric(horizontal: 10, vertical: 4);
     return Center(
       child: Wrap(
-        spacing: 5,
-        runSpacing: 1.5,
+        spacing: 6,
+        runSpacing: 2,
         children: _labels.entries.map((MapEntry<int, String> e) {
           final int repDigit = e.key;
           final String label = e.value;
           final bool selected = _isInGroup(selectedDigit, repDigit);
           return Tooltip(
             message: 'Grupo $label',
-            child: ChoiceChip(
-              label: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                child: Text(label, style: chipTextStyle),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 48),
+              child: ChoiceChip(
+                label: Padding(
+                  padding: chipPadding,
+                  child: Text(
+                    label,
+                    style: chipTextStyle,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                selected: selected,
+                selectedColor: scheme.primaryContainer,
+                backgroundColor: scheme.surfaceContainerHighest.withOpacity(
+                  0.10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(11),
+                  side: selected
+                      ? BorderSide(color: scheme.primary, width: 1)
+                      : BorderSide(
+                          color: scheme.outline.withOpacity(0.12),
+                          width: 1,
+                        ),
+                ),
+                elevation: selected ? 1 : 0,
+                shadowColor: scheme.primary.withOpacity(0.06),
+                onSelected: (bool s) {
+                  if (s) onChanged(repDigit);
+                },
+                showCheckmark: false,
+                visualDensity: VisualDensity(horizontal: -2, vertical: -2),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              selected: selected,
-              selectedColor: scheme.primaryContainer,
-              backgroundColor: scheme.surfaceContainerHighest.withOpacity(0.10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(11),
-                side: selected
-                    ? BorderSide(color: scheme.primary, width: 1)
-                    : BorderSide(
-                        color: scheme.outline.withOpacity(0.12),
-                        width: 1,
-                      ),
-              ),
-              elevation: selected ? 1 : 0,
-              shadowColor: scheme.primary.withOpacity(0.06),
-              onSelected: (bool s) {
-                if (s) onChanged(repDigit);
-              },
-              showCheckmark: false,
-              visualDensity: VisualDensity(horizontal: -2, vertical: -2),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           );
         }).toList(),
@@ -878,13 +911,11 @@ class _EmbeddedGasCalculator extends StatefulWidget {
     required this.tasa,
     required this.loading,
     required this.onRefresh,
-    this.dense = false,
   });
   final TextEditingController litrosCtrl;
   final double? tasa;
   final bool loading;
   final VoidCallback onRefresh;
-  final bool dense;
 
   @override
   State<_EmbeddedGasCalculator> createState() => _EmbeddedGasCalculatorState();
@@ -921,8 +952,9 @@ class _EmbeddedGasCalculatorState extends State<_EmbeddedGasCalculator> {
     double? totalBs;
     if (litros != null) {
       totalUsd = litros / 2; // regla solicitada
-      if (widget.tasa != null)
+      if (widget.tasa != null) {
         totalBs = totalUsd * widget.tasa!; // conversión con BCV
+      }
     }
     final NumberFormat fmtUsd = NumberFormat('#,##0.00', 'es_VE');
     final NumberFormat fmtBs = NumberFormat.currency(
@@ -932,19 +964,20 @@ class _EmbeddedGasCalculatorState extends State<_EmbeddedGasCalculator> {
     );
     final NumberFormat fmtTasa = NumberFormat('#,##0.00', 'es_VE');
     final scheme = Theme.of(context).colorScheme;
-    final double vPad = widget.dense ? 2 : 10;
-    final double hPad = widget.dense ? 8 : 14;
-    final double titleFontSize = widget.dense
+    final bool dense = MediaQuery.of(context).viewInsets.bottom > 0;
+    final double vPad = dense ? 2 : 10;
+    final double hPad = dense ? 8 : 14;
+    final double titleFontSize = dense
         ? 13
         : Theme.of(context).textTheme.titleMedium?.fontSize ?? 16;
-    final double valueFontSize = widget.dense
+    final double valueFontSize = dense
         ? 13
         : Theme.of(context).textTheme.titleMedium?.fontSize ?? 16;
     return Container(
       margin: EdgeInsets.zero,
       padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(widget.dense ? 14 : 20),
+        borderRadius: BorderRadius.circular(dense ? 14 : 20),
         color: scheme.surfaceContainerHighest.withOpacity(0.18),
         boxShadow: [
           BoxShadow(
@@ -969,16 +1002,18 @@ class _EmbeddedGasCalculatorState extends State<_EmbeddedGasCalculator> {
                 child: const Icon(Icons.local_gas_station, size: 20),
               ),
               const SizedBox(width: 10),
-              Text(
-                'Calculadora de Gasolina',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: titleFontSize,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.1,
+              Flexible(
+                child: Text(
+                  'Calculadora de Gasolina',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.1,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
-              const Spacer(),
               IconButton(
                 onPressed: widget.loading ? null : widget.onRefresh,
                 tooltip: 'Actualizar tasa',
@@ -993,29 +1028,40 @@ class _EmbeddedGasCalculatorState extends State<_EmbeddedGasCalculator> {
             ],
           ),
           const Divider(height: 18, thickness: 1, indent: 0, endIndent: 0),
-          TextField(
-            controller: widget.litrosCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: TextStyle(
-              fontSize: valueFontSize + 2,
-              fontWeight: FontWeight.w600,
-            ),
-            decoration: InputDecoration(
-              isDense: true,
-              labelText: 'Litros',
-              prefixIcon: const Icon(Icons.local_gas_station),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: scheme.primary.withOpacity(0.18)),
+          SizedBox(
+            height: 48,
+            child: TextField(
+              controller: widget.litrosCtrl,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
               ),
-              filled: true,
-              fillColor: scheme.surfaceContainerHighest.withOpacity(0.10),
+              style: TextStyle(
+                fontSize: valueFontSize + 2,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 0,
+                ),
+                labelText: 'Litros',
+                prefixIcon: const Icon(Icons.local_gas_station),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: scheme.primary.withOpacity(0.18),
+                  ),
+                ),
+                filled: true,
+                fillColor: scheme.surfaceContainerHighest.withOpacity(0.10),
+              ),
             ),
           ),
-          SizedBox(height: widget.dense ? 8 : 16),
+          SizedBox(height: dense ? 8 : 16),
           if (totalBs != null)
             Padding(
-              padding: EdgeInsets.only(bottom: widget.dense ? 2 : 6),
+              padding: EdgeInsets.only(bottom: dense ? 2 : 6),
               child: Row(
                 children: [
                   const Icon(Icons.attach_money, size: 18),
@@ -1042,7 +1088,7 @@ class _EmbeddedGasCalculatorState extends State<_EmbeddedGasCalculator> {
             ),
           if (totalUsd != null)
             Padding(
-              padding: EdgeInsets.only(bottom: widget.dense ? 2 : 6),
+              padding: EdgeInsets.only(bottom: dense ? 2 : 6),
               child: Row(
                 children: [
                   const Icon(Icons.attach_money, size: 18),
