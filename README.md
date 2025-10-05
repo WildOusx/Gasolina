@@ -1,9 +1,5 @@
 # ⛽ Gasolina — App Flutter
 
-> Sistema móvil para consultar el calendario de gasolina en Venezuela, con acceso rápido a la tasa oficial USD/BS y atajos inteligentes. ¡Todo en la palma de tu mano!
-
----
-
 ## 🏗️ Estructura del Proyecto
 
 ### 📁 Organización de Carpetas
@@ -92,4 +88,3 @@ flutter run
 
 Desarrollado y mantenido por WildOusx.
 
-¿Tienes sugerencias o encontraste un error? ¡Abre un issue o pull request!
