@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:gasolina/main.dart';
 
@@ -15,6 +16,17 @@ void main() {
   testWidgets('App builds and shows title', (WidgetTester tester) async {
     // Mock SharedPreferences for fast, synchronous resolution in tests.
     SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    // Ensure intl date symbols are initialized for table_calendar
+    await initializeDateFormatting();
+
+    // Set a test window size so TableCalendar has bounded constraints
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
 
     // Build the app and trigger a frame.
     await tester.pumpWidget(const GasolinaApp());

@@ -1,120 +1,89 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// Cool Coastal Vibes palette
-// 2B2D42 (navy), 8D99AE (blue-gray), EDF2F4 (off-white), EF233C (red), D90429 (dark red)
+// New refined palette based on the original palette but tuned for better contrast
 class AppColors {
-  static const Color navy = Color(0xFF2B2D42);
-  static const Color blueGray = Color(0xFF8D99AE);
-  static const Color offWhite = Color(0xFFEDF2F4);
-  static const Color red = Color(0xFFEF233C);
-  static const Color darkRed = Color(0xFFD90429);
-  static const Color white = Color(0xFFFFFFFF);
-  static const Color black = Color(0xFF000000);
+  static const Color primary = Color(0xFFB0002E); // warmer accent red
+  static const Color navy = Color(0xFF1F2430);
+  static const Color slate = Color(0xFF728096);
+  static const Color bg = Color(0xFFF7F9FB);
+  static const Color card = Color(0xFFFFFFFF);
+  static const Color error = Color(0xFFB00020);
 }
 
-ThemeData appThemeLight({Color accent = AppColors.red}) {
-  final ColorScheme scheme = ColorScheme(
+ThemeData appThemeLight({Color accent = AppColors.primary}) {
+  final ColorScheme scheme = ColorScheme.fromSeed(
+    seedColor: accent,
     brightness: Brightness.light,
     primary: accent,
-    onPrimary: AppColors.white,
     secondary: AppColors.navy,
-    onSecondary: AppColors.white,
-    error: AppColors.darkRed,
-    onError: AppColors.white,
-    surface: AppColors.white,
-    onSurface: AppColors.navy,
-    surfaceContainerHighest: AppColors.blueGray,
-    onSurfaceVariant: AppColors.navy,
-    primaryContainer: AppColors.darkRed,
-    onPrimaryContainer: AppColors.white,
-    secondaryContainer: AppColors.blueGray,
-    onSecondaryContainer: AppColors.white,
-    outline: AppColors.blueGray,
+    error: AppColors.error,
   );
 
   return ThemeData(
     useMaterial3: true,
-    brightness: Brightness.light,
     colorScheme: scheme,
-    scaffoldBackgroundColor: AppColors.white,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.navy,
-      foregroundColor: AppColors.white,
+    scaffoldBackgroundColor: AppColors.bg,
+    appBarTheme: AppBarTheme(
+      backgroundColor: scheme.primaryContainer.withAlpha((0.98 * 255).round()),
+      foregroundColor: scheme.onPrimaryContainer,
       elevation: 0,
       systemOverlayStyle: SystemUiOverlayStyle.light,
     ),
-    cardTheme: const CardThemeData(
-      color: AppColors.white,
+    cardTheme: CardThemeData(
+      color: AppColors.card,
       surfaceTintColor: Colors.transparent,
-      elevation: 2,
+      elevation: 4,
       margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(color: AppColors.navy),
-      displayMedium: TextStyle(color: AppColors.navy),
-      displaySmall: TextStyle(color: AppColors.navy),
-      headlineMedium: TextStyle(color: AppColors.navy),
-      headlineSmall: TextStyle(color: AppColors.navy),
-      titleLarge: TextStyle(color: AppColors.navy),
-      bodyLarge: TextStyle(color: AppColors.navy),
-      bodyMedium: TextStyle(color: AppColors.navy),
-      labelMedium: TextStyle(color: AppColors.navy),
+    textTheme: TextTheme(
+      titleLarge: TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w700),
+      bodyMedium: TextStyle(color: scheme.onSurface),
+      labelMedium: TextStyle(color: scheme.onSurfaceVariant),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: accent,
-        foregroundColor: AppColors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: accent,
-        foregroundColor: AppColors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: accent),
+      style: TextButton.styleFrom(foregroundColor: scheme.primary),
     ),
-    chipTheme: const ChipThemeData(
-      side: BorderSide(color: AppColors.blueGray),
-      selectedColor: AppColors.darkRed,
-      labelStyle: TextStyle(color: AppColors.navy),
+    chipTheme: ChipThemeData(
+      side: BorderSide(color: scheme.outline),
+      selectedColor: scheme.primaryContainer,
+      labelStyle: TextStyle(color: scheme.onSurface),
     ),
   );
 }
 
-ThemeData appThemeDark({Color accent = AppColors.red}) {
-  final ColorScheme scheme = ColorScheme(
+ThemeData appThemeDark({Color accent = AppColors.primary}) {
+  final ColorScheme scheme = ColorScheme.fromSeed(
+    seedColor: accent,
     brightness: Brightness.dark,
     primary: accent,
-    onPrimary: AppColors.white,
-    secondary: AppColors.blueGray,
-    onSecondary: AppColors.black,
-    error: AppColors.darkRed,
-    onError: AppColors.white,
-    surface: const Color(0xFF23283A),
-    onSurface: AppColors.offWhite,
-    surfaceContainerHighest: const Color(0xFF2E3450),
-    onSurfaceVariant: AppColors.offWhite,
-    primaryContainer: const Color(0xFF7A0E18),
-    onPrimaryContainer: AppColors.white,
-    secondaryContainer: const Color(0xFF3C4154),
-    onSecondaryContainer: AppColors.offWhite,
-    outline: AppColors.blueGray,
+    secondary: AppColors.slate,
+    error: AppColors.error,
   );
 
   return ThemeData(
     useMaterial3: true,
-    brightness: Brightness.dark,
     colorScheme: scheme,
-    scaffoldBackgroundColor: scheme.surface,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF1B1E2B),
-      foregroundColor: AppColors.offWhite,
+    scaffoldBackgroundColor: const Color(0xFF0F1720),
+    appBarTheme: AppBarTheme(
+      backgroundColor: const Color(0xFF0B1220),
+      foregroundColor: scheme.onSurface,
       elevation: 0,
       systemOverlayStyle: SystemUiOverlayStyle.light,
     ),
@@ -123,35 +92,30 @@ ThemeData appThemeDark({Color accent = AppColors.red}) {
       surfaceTintColor: Colors.transparent,
       elevation: 2,
       margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(color: AppColors.offWhite),
-      displayMedium: TextStyle(color: AppColors.offWhite),
-      displaySmall: TextStyle(color: AppColors.offWhite),
-      headlineMedium: TextStyle(color: AppColors.offWhite),
-      headlineSmall: TextStyle(color: AppColors.offWhite),
-      titleLarge: TextStyle(color: AppColors.offWhite),
-      bodyLarge: TextStyle(color: AppColors.offWhite),
-      bodyMedium: TextStyle(color: AppColors.offWhite),
-      labelMedium: TextStyle(color: AppColors.offWhite),
+    textTheme: TextTheme(
+      titleLarge: TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w700),
+      bodyMedium: TextStyle(color: scheme.onSurface),
+      labelMedium: TextStyle(color: scheme.onSurfaceVariant),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: accent,
-        foregroundColor: AppColors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: accent,
-        foregroundColor: AppColors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: accent),
+      style: TextButton.styleFrom(foregroundColor: scheme.primary),
     ),
     chipTheme: ChipThemeData(
       side: BorderSide(color: scheme.outline),

@@ -42,35 +42,40 @@ class PlateGroupChips extends StatelessWidget {
             message: 'Grupo $label',
             child: ConstrainedBox(
               constraints: const BoxConstraints(minWidth: 48),
-              child: ChoiceChip(
-                label: Padding(
-                  padding: chipPadding,
-                  child: Text(
-                    label,
-                    style: chipTextStyle,
-                    textAlign: TextAlign.center,
+              child: Semantics(
+                button: true,
+                label: 'Seleccionar grupo $label',
+                toggled: selected,
+                child: ChoiceChip(
+                  label: Padding(
+                    padding: chipPadding,
+                    child: Text(
+                      label,
+                      style: chipTextStyle,
+                      textAlign: TextAlign.center,
+                    ),
                   ),
+                  selected: selected,
+                  selectedColor: scheme.primaryContainer,
+                  backgroundColor: scheme.surfaceContainerHighest.withAlpha((0.10 * 255).round()),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(11),
+                    side: selected
+                        ? BorderSide(color: scheme.primary, width: 1)
+                        : BorderSide(
+                            color: scheme.outline.withAlpha((0.12 * 255).round()),
+                            width: 1,
+                          ),
+                  ),
+                  elevation: selected ? 1 : 0,
+                  shadowColor: scheme.primary.withAlpha((0.06 * 255).round()),
+                  onSelected: (bool s) {
+                    if (s) onChanged(repDigit);
+                  },
+                  showCheckmark: false,
+                  visualDensity: VisualDensity(horizontal: -2, vertical: -2),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                selected: selected,
-                selectedColor: scheme.primaryContainer,
-                backgroundColor: scheme.surfaceContainerHighest.withAlpha((0.10 * 255).round()),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(11),
-                  side: selected
-                      ? BorderSide(color: scheme.primary, width: 1)
-                      : BorderSide(
-                          color: scheme.outline.withAlpha((0.12 * 255).round()),
-                          width: 1,
-                        ),
-                ),
-                elevation: selected ? 1 : 0,
-                shadowColor: scheme.primary.withAlpha((0.06 * 255).round()),
-                onSelected: (bool s) {
-                  if (s) onChanged(repDigit);
-                },
-                showCheckmark: false,
-                visualDensity: VisualDensity(horizontal: -2, vertical: -2),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
           );

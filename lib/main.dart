@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:quick_actions/quick_actions.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'screens/gas_calendar_screen.dart';
-import 'utils/quick_action_bus.dart';
 import 'theme.dart';
 
-void main() {
-  const QuickActions quickActions = QuickActions();
-  quickActions.initialize((String type) async {
-    if (type == 'action_today') {
-      QuickActionBus.instance.triggerToday();
-    }
-  });
-  quickActions.setShortcutItems(<ShortcutItem>[
-    const ShortcutItem(
-      type: 'action_today',
-      localizedTitle: 'Ir a Hoy',
-      icon: 'ic_launcher',
-    ),
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize date formatting for table_calendar / intl usage
+  await initializeDateFormatting();
+
+  // Initialize date formatting for common locales used by the app (helps table_calendar)
+  await Future.wait([
+    initializeDateFormatting('en_US'),
+    initializeDateFormatting('es'),
   ]);
+
   runApp(const GasolinaApp());
 }
 

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../data/bcv_service.dart';
 import '../data/schedules.dart';
-import '../widgets/calendar_grid.dart';
 import '../widgets/embedded_gas_calculator.dart';
 import '../widgets/plate_group_chips.dart';
+import '../widgets/advanced_calendar.dart';
+import '../utils/show_day_details.dart';
 
 class GasCalendarScreen extends StatefulWidget {
   const GasCalendarScreen({super.key, required this.themeMode, required this.onThemeModeChanged});
@@ -16,6 +18,8 @@ class GasCalendarScreen extends StatefulWidget {
 }
 
 class _GasCalendarScreenState extends State<GasCalendarScreen> {
+  late final Stream<ConnectivityResult> _connectivityStream;
+  bool _isOnline = true;
   @override
   Widget build(BuildContext context) {
     if (_loadingPrefs) {
@@ -73,18 +77,6 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
           builder: (context, constraints) {
             final bool isWide = constraints.maxWidth > 700;
             final double spacing = 16;
-            Widget calendarWidget = Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: CalendarSection(
-                  pairLabel: pairLabel,
-                  year: y,
-                  month: m,
-                  days: days,
-                ),
-              ),
-            );
             Widget calculatorWidget = Card(
               margin: EdgeInsets.zero,
               child: Padding(
@@ -151,7 +143,7 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
               ],
             );
             if (isWide) {
-              // Horizontal layout para pantallas anchas
+              // Horizontal layout para pantallas anchas (ahora con AdvancedCalendar)
               return Padding(
                 padding: EdgeInsets.all(spacing),
                 child: Column(
@@ -161,7 +153,29 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(flex: 2, child: calendarWidget),
+                          Expanded(
+                            flex: 2,
+                            child: Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: AdvancedCalendar(
+                                  year: y,
+                                  month: m,
+                                  selectedDigit: lastDigit,
+                                  pairLabel: pairLabel,
+                                  onDaySelected: (d) {
+                                    if (d != null) {
+                                      final bool allowed = days.contains(d.day);
+                                      final bool isWeekend = d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
+                                      final bool isToday = d.year == DateTime.now().year && d.month == DateTime.now().month && d.day == DateTime.now().day;
+                                      showDayDetails(context, d.day, allowed, isWeekend, isToday);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
                           SizedBox(width: spacing),
                           Flexible(
                             flex: 1,
@@ -177,6 +191,22 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
               );
             } else {
               // Vertical layout para pantallas pequeñas
+              // Banner de estado de conectividad (solo visible si offline)
+              final Widget connectivityBanner = AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                height: _isOnline ? 0 : 36,
+                child: _isOnline
+                    ? const SizedBox.shrink()
+                    : Container(
+                        color: Colors.redAccent,
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'Sin conexión — mostrando datos en cache',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+              );
+
               return Padding(
                 padding: EdgeInsets.all(spacing),
                 child: SingleChildScrollView(
@@ -184,7 +214,28 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       header,
-                      calendarWidget,
+                      connectivityBanner,
+                      // Para pantallas pequeñas usamos AdvancedCalendar para funciones extra
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: AdvancedCalendar(
+                            year: y,
+                            month: m,
+                            selectedDigit: lastDigit,
+                            pairLabel: pairLabel,
+                            onDaySelected: (d) {
+                              if (d != null) {
+                                final bool allowed = days.contains(d.day);
+                                final bool isWeekend = d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
+                                final bool isToday = d.year == DateTime.now().year && d.month == DateTime.now().month && d.day == DateTime.now().day;
+                                showDayDetails(context, d.day, allowed, isWeekend, isToday);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
                       SizedBox(height: spacing),
                       calculatorWidget,
                     ],
@@ -212,6 +263,15 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
     super.initState();
     final now = DateTime.now();
     currentMonth = DateTime(now.year, now.month, 1);
+    // Inicializar monitor de conectividad
+    _connectivityStream = Connectivity().onConnectivityChanged;
+    _connectivityStream.listen((ConnectivityResult result) {
+      final bool online = result != ConnectivityResult.none;
+      if (online != _isOnline) {
+        setState(() => _isOnline = online);
+      }
+    });
+
     _initAsync();
   }
 
@@ -270,6 +330,10 @@ class _GasCalendarScreenState extends State<GasCalendarScreen> {
         _tasa = tasa;
         _loadingTasa = false;
       });
+      if (tasa != null) {
+        // Cachear la tasa para uso offline
+        await BcvService.cacheUsdRate(tasa);
+      }
     } catch (_) {
       setState(() => _loadingTasa = false);
     }
